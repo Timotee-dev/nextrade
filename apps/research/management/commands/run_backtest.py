@@ -151,7 +151,9 @@ class Command(BaseCommand):
             self.stdout.write(f"  signals: {d.get('signals', 0)} ({d.get('signals_per_day') or 0} per day)"
                               + (f"   hit rate after costs: {d['label_hit_rate']:.1%}, mean {d['label_mean_r_net']:+.3f} R"
                                  if d.get("label_hit_rate") is not None and d.get("label_mean_r_net") is not None else ""))
-            if raw.get("trades"):
+            if d.get("judged_raw"):
+                self.stdout.write("  judged on raw trades (rule-based exits; NAIA filter not applied, ADR 0006)")
+            elif raw.get("trades"):
                 self.stdout.write(f"  without the NAIA filter: {raw['trades']} trades, mean net R {raw['expectancy_r']:+.3f}, "
                                   f"win rate {raw['win_rate']:.1%}")
             if d.get("naia_rejections"):

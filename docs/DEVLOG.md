@@ -2,6 +2,21 @@
 
 Newest first.
 
+## 2026-11-11 · Confirmation failed; strategies T1 and T2 pre-registered
+
+**Confirmation test** (decided before running): daily breakout, unchanged, on 10 unseen coins.
+Result: 408 unfiltered trades, mean net R -0.144 (random baseline -0.160). The BTC/ETH/SOL
+result (100 trades, +0.222, 95% CI -0.054 to +0.503) does not generalise. Breakout dropped.
+
+**Quidax universe** (by NGN volume, spread): USDT, BTC, USDC, ETH, SOL, LTC, XRP (13.6 bps),
+DASH, TRX. Others have no volume.
+
+**Built**: pre-registered T1 `trendfilter` and T2 `rotation` (ADR 0006, written before any test),
+rule-based exits in research (exit on invalidation), strategies judged on raw trades,
+cross-sectional preparation hook for strategies that rank coins.
+
+**Tests**: 391 passing.
+
 ## 2026-11-11 · Daily walk-forward with real sizing: breakout is the only candidate
 
 | Daily, risk/trade | Strategy | OOS trades | Mean net R (95% CI) | Random baseline |

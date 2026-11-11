@@ -65,6 +65,11 @@ def _signals_in(signals: list[Signal], start, end) -> list[Signal]:
 
 def evaluate_strategy(strategy: Strategy, frames: dict[str, pd.DataFrame], instruments: dict[str, Instrument],
                       costs: CostModel, risk: RiskEngine, cfg: ResearchConfig) -> ResearchResult:
+    prepare = getattr(strategy, "prepare_frames", None)
+    if prepare is not None:
+        frames = prepare(frames)
+    judged_raw = bool(getattr(strategy, "judged_raw", False))
+    exit_policy = None
     tf = None
     signals: list[Signal] = []
     for sym, frame in frames.items():
@@ -74,6 +79,10 @@ def evaluate_strategy(strategy: Strategy, frames: dict[str, pd.DataFrame], instr
     signals.sort(key=lambda s: s.decision_time)
     n_bars = sum(len(f) for f in frames.values())
     baseline = RandomEntry.matching(strategy, probability=max(len(signals) / max(n_bars, 1), 1e-4))
+    if getattr(strategy, "exit_on_invalidation", False):
+        from nextrade_core.npei.exits import ExitConfig, make_exit_policy
+        exit_policy = make_exit_policy({strategy.code: strategy, baseline.code: baseline},
+                                       ExitConfig(use_invalidation=True))
     base_signals = sorted((s for sym, f in frames.items() for s in baseline.generate(f, sym, _tf(f))),
                           key=lambda s: s.decision_time)
 
@@ -91,15 +100,16 @@ def evaluate_strategy(strategy: Strategy, frames: dict[str, pd.DataFrame], instr
             scorer = lambda s, n=naia: n.evaluate(s, MarketContext())  # noqa: E731
             test_frames = {sym: f[(f.index >= fold.test_start - pd.Timedelta(days=0)) & (f.index < fold.test_end)]
                            for sym, f in frames.items()}
-            bt = Backtester(test_frames, instruments, costs, risk, cfg.initial_cash, scorer=scorer)
+            bt = Backtester(test_frames, instruments, costs, risk, cfg.initial_cash,
+                            scorer=None if judged_raw else scorer, exit_policy=exit_policy)
             res = bt.run(_signals_in(signals, fold.test_start, fold.test_end))
-            raw_res = Backtester(test_frames, instruments, costs, risk, cfg.initial_cash).run(
+            raw_res = Backtester(test_frames, instruments, costs, risk, cfg.initial_cash, exit_policy=exit_policy).run(
                 _signals_in(signals, fold.test_start, fold.test_end))
             if len(raw_res.trades):
                 raw_trades.append(raw_res.trades.assign(fold=fold.number))
             for k, v in res.rejections.items():
                 rejections_total[k] = rejections_total.get(k, 0) + v
-            base_bt = Backtester(test_frames, instruments, costs, risk, cfg.initial_cash)
+            base_bt = Backtester(test_frames, instruments, costs, risk, cfg.initial_cash, exit_policy=exit_policy)
             base_res = base_bt.run(_signals_in(base_signals, fold.test_start, fold.test_end))
             if len(res.trades):
                 oos_trades.append(res.trades.assign(fold=fold.number))
@@ -125,6 +135,7 @@ def evaluate_strategy(strategy: Strategy, frames: dict[str, pd.DataFrame], instr
         "label_hit_rate": float(labelled["y"].mean()) if labelled is not None else None,
         "label_mean_r_net": float(labelled["r_net"].mean()) if labelled is not None and "r_net" in labelled else None,
         "naia_rejections": rejections_total,
+        "judged_raw": judged_raw,
     }
     return ResearchResult(strategy.version, folds, trades, summary, base_summary, gate, dataset_hash(ds),
                           _pooled_summary(rtrades, cfg), diagnostics)

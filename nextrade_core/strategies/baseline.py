@@ -74,6 +74,9 @@ class RandomEntry(Strategy):
     def invalidation_rule(self) -> str:
         return self.template.invalidation_rule() if self.template else "none (random baseline)"
 
+    def is_invalidated(self, signal, bar) -> bool:
+        return self.template.is_invalidated(signal, bar) if self.template else super().is_invalidated(signal, bar)
+
     def _plan(self, f: pd.DataFrame) -> pd.DataFrame:
         p: RandomEntryParams = self.params  # type: ignore[assignment]
         draw = pd.Series(bar_uniforms(f.index, p.seed, self._salt) < p.probability, index=f.index)
