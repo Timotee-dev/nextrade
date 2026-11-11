@@ -1,4 +1,7 @@
-"""Record Quidax 1m candles and best bid/ask every minute until stopped (Ctrl+C).
+"""Record Quidax 1m candles, closed 1h candles and best bid/ask every minute until stopped.
+
+Quidax only serves its newest ~300 bars, so this recorder is the only way to build a
+real Quidax history: keep it running.
 
 Quidax documents no websocket stream, so this polls: per market and minute, one
 k-line request (closed bars since the newest stored one) and one depth request
@@ -36,6 +39,14 @@ def poll_once(client, store: CandleStore, symbols: list[str], now: datetime, sta
             if closed:
                 store.save_candles(closed, "rest")
                 stats["candles"] += len(closed)
+            last_h = store.last_open_time(symbol, Timeframe.H1)
+            if last_h is None or last_h + 2 * Timeframe.H1.delta <= now:   # a new 1h bar has closed
+                rows = client.klines(market_of(symbol), 60, limit=300)
+                hours = [c for c in parse_klines(rows, symbol, Timeframe.H1)
+                         if c.is_closed(now) and (last_h is None or c.open_time > last_h)]
+                if hours:
+                    store.save_candles(hours, "rest")
+                    stats["hours"] = stats.get("hours", 0) + len(hours)
             top = best_bid_ask(client.depth(market_of(symbol), 5))
             if top:
                 store.save_quotes([Quote(symbol, now, *top)])

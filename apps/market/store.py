@@ -12,7 +12,7 @@ from adapters.binance.stream import Quote
 import pandas as pd
 
 from nextrade_core.data.candles import Candle, Timeframe
-from nextrade_core.data.resample import resample
+from nextrade_core.data.resample import resample, resample_from
 from nextrade_core.features.frame import candles_to_frame
 
 from .models import Candle as CandleRow
@@ -98,5 +98,9 @@ class CandleStore:
                 return candles_to_frame(native)
         bars = [c for chunk in self.iter_candles(symbol, start, end) for c in chunk]
         if timeframe is not Timeframe.M1:
+            if timeframe.minutes % 60 == 0 and timeframe is not Timeframe.H1:
+                hourly = [c for chunk in self.iter_candles(symbol, start, end, Timeframe.H1) for c in chunk]
+                if hourly and len(hourly) * 60 >= len(bars):   # 1h coverage beats 1m: build from 1h
+                    return candles_to_frame(resample_from(hourly, timeframe))
             bars = resample(bars, timeframe).candles
         return candles_to_frame(bars)

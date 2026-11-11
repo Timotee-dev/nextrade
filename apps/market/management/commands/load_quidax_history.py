@@ -1,9 +1,8 @@
-"""Load Quidax k-line history into the database, natively at each requested timeframe.
-
-Quidax serves at most 10,000 bars per request (about 7 days of 1m bars, 14 months of
-1h bars, 4.5 years of 4h bars), paged forward with `timestamp`. Research on 1h and 4h
-therefore stores those timeframes natively instead of resampling from 1m.
-Resumable: each timeframe continues from the newest stored bar.
+"""Load the recent Quidax k-lines Quidax still serves (verified 2026-11-11 from Nigeria):
+only the newest ~300 bars per period, `timestamp` is ignored, and the 4h and 1d periods
+return nothing. So this keeps the last ~300 1h bars (12 days) and ~300 1m bars; deeper
+Quidax history only exists if `record_quidax` runs continuously. For research history
+use load_gate_history. 4h Quidax bars are built from stored 1h bars.
 """
 
 from __future__ import annotations
@@ -26,11 +25,11 @@ now_utc = lambda: datetime.now(UTC)  # noqa: E731
 
 
 class Command(BaseCommand):
-    help = "Download Quidax candles (default 1h and 4h) for the configured markets."
+    help = "Download the recent Quidax candles still served (1h and 1m)."
 
     def add_arguments(self, parser):
         parser.add_argument("--symbols", default=None, help="e.g. ETHNGN,USDTNGN")
-        parser.add_argument("--timeframes", default="1h,4h")
+        parser.add_argument("--timeframes", default="1h,1m")
         parser.add_argument("--start", default="2023-01-01", help="YYYY-MM-DD, used when nothing is stored yet")
 
     def handle(self, *args, **o):
@@ -75,5 +74,5 @@ class Command(BaseCommand):
             return
         note = ""
         if not last and first_seen and first_seen - start > timedelta(days=7):
-            note = f"  (history on Quidax starts {first_seen:%Y-%m-%d})"
+            note = f"  (Quidax only serves bars from {first_seen:%Y-%m-%d %H:%M} UTC)"
         self.stdout.write(f"  {symbol} {tf.value}: {total} bars{note}")

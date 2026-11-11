@@ -1,12 +1,12 @@
 # NEXTRADE status
 
-Last updated: 2026-11-11 (Quidax market data)
+Last updated: 2026-11-11 (Gate.io research history)
 
 | Stage | Phase | Status |
 | --- | --- | --- |
 | 1. Foundation and data | 0. Venue access | Binance blocked on your network; Quidax reachable (ADR 0005) |
 | | 1. Foundation | Done |
-| | 2. Market data | Quidax loader + recorder built; needs your run |
+| | 2. Market data | Quidax keeps ~300 bars: recorder must run; Gate.io history for research |
 | | 3. Features | Done |
 | 2. Research | 4. Strategies A, C, D (+ filters B, E, F, G, random baseline) | Done, re-verified |
 | | 5. NAIA (regimes, labels, models, scoring) | Built; tests pass |
@@ -21,7 +21,7 @@ Last updated: 2026-11-11 (Quidax market data)
 | | 14. Controlled live trading | Not started (live Binance broker, `go_live_check`, `run_live`) |
 | Capacity | 100 trades/day per market | Not yet load-tested |
 
-Tests: 369 passing, 94% line coverage. Phases 4-13 were first built in an earlier
+Tests: 378 passing, 94% line coverage. Phases 4-13 were first built in an earlier
 session whose log entries were lost; see the DEVLOG recovery note.
 
 ## Open items for the operator

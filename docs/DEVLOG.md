@@ -2,6 +2,31 @@
 
 Newest first.
 
+## 2026-11-11 · Research history from Gate.io; Quidax limits measured
+
+**Found on the operator's network**
+- Quidax serves only its newest ~300 bars per period; `timestamp` is ignored; 4h and 1d
+  return nothing. Quidax alone cannot support a backtest.
+- Reachable: Gate.io (public API) and CoinGecko. Blocked: Binance, Bybit, KuCoin, OKX,
+  Kraken, Coinbase. CryptoCompare needs a key.
+- Gate.io candles: `[time_s, quote_volume, CLOSE, HIGH, LOW, OPEN, base_volume, closed]`,
+  at most 10,000 bars back (1h about 14 months, 4h about 4.5 years), 1,000 per request.
+
+**Built**
+- `adapters/gate/client.py` (read-only research data) and `load_gate_history`.
+- `run_backtest --venue gate`: Gate prices with Quidax costs (0.15% fee, Quidax spreads
+  measured on the matching NGN pair), NGN 20,000 and the NGN 1,250 minimum converted to
+  USDT at the latest stored USDT/NGN rate (or `--ngn-per-usdt`).
+- `load_quidax_history` now requests only what Quidax serves (1h, 1m); `record_quidax`
+  also stores each closed 1h bar, so real Quidax history accumulates while it runs.
+- 4h frames can be built from stored 1h bars (`resample_from`).
+- `.gitattributes` for consistent line endings.
+
+**Tests**: 378 passing. Fixtures are the operator's real Gate.io responses.
+
+**Caveat**: Gate prices are a stand-in for Quidax prices. Quidax NGN books are thinner, so
+real fills will differ; paper trading on live Quidax quotes is the check.
+
 ## 2026-11-11 · Quidax market data (crypto venue switch)
 
 **Why**: Binance, its data archive and Bybit are blocked on the operator's network (DNS

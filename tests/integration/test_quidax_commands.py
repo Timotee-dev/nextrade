@@ -46,12 +46,15 @@ def quidax_handler(calls):
         if path.endswith("/k"):
             market = path.split("/")[2]
             period = int(request.url.params["period"])
-            since_ms = int(request.url.params.get("timestamp", 0)) * 1000
             limit = min(int(request.url.params.get("limit", 30)), PAGE_CAP)
             df = SERIES[(market, period)]
             rows = [[utc_to_ms(t.to_pydatetime()), f"{r.open:.2f}", f"{r.close:.2f}", f"{r.high:.2f}",
-                     f"{r.low:.2f}", f"{r.volume:.6f}"] for t, r in df.iterrows()
-                    if utc_to_ms(t.to_pydatetime()) >= since_ms][:limit]
+                     f"{r.low:.2f}", f"{r.volume:.6f}"] for t, r in df.iterrows()]
+            if "timestamp" in request.url.params:      # paging mode (kept to test the loader's paging)
+                since_ms = int(request.url.params["timestamp"]) * 1000
+                rows = [r for r in rows if r[0] >= since_ms][:limit]
+            else:                                      # real Quidax: the newest `limit` bars
+                rows = rows[-limit:]
             return httpx.Response(200, json={"status": "success", "data": list(reversed(rows))})  # newest first
         return httpx.Response(404, content=(FX / "not_found.json").read_bytes())
     return handler
@@ -76,7 +79,7 @@ def closed_count(market, period):
 
 
 def test_history_pages_resumes_and_stores_native_timeframes(quidax, capsys):
-    call_command("load_quidax_history", symbols="ETHNGN,USDTNGN", start="2026-01-01")
+    call_command("load_quidax_history", symbols="ETHNGN,USDTNGN", timeframes="1h,4h", start="2026-01-01")
     out = capsys.readouterr().out
     for sym, market in (("ETHNGN", "ethngn"), ("USDTNGN", "usdtngn")):
         inst = Instrument.objects.get(venue="quidax", symbol=sym)
@@ -89,7 +92,7 @@ def test_history_pages_resumes_and_stores_native_timeframes(quidax, capsys):
     assert float(eth.high) == pytest.approx(ref.high, abs=0.01) and float(eth.close) == pytest.approx(ref.close, abs=0.01)
     assert "1416 bars" in out
 
-    call_command("load_quidax_history", symbols="ETHNGN,USDTNGN", start="2026-01-01")
+    call_command("load_quidax_history", symbols="ETHNGN,USDTNGN", timeframes="1h,4h", start="2026-01-01")
     assert capsys.readouterr().out.count("up to date") == 4
 
 
@@ -105,6 +108,9 @@ def test_recorder_polls_candles_and_spreads(quidax, capsys):
     inst = Instrument.objects.get(symbol="ETHNGN")
     assert Candle.objects.filter(instrument=inst, timeframe="1m").count() == 120   # 2h backfill on first poll
     assert QuoteSample.objects.filter(instrument=inst).count() == 2
+    hours = Candle.objects.filter(instrument=inst, timeframe="1h").order_by("open_time")
+    assert hours.count() == 299                       # newest 300 minus the still-forming hour
+    assert hours.last().open_time == datetime(2026, 2, 28, 23, tzinfo=UTC)
     q = QuoteSample.objects.first()
     assert (q.bid, q.ask) == (Decimal("104037527"), Decimal("104547199"))
 
@@ -121,3 +127,12 @@ def test_backtest_runs_on_quidax_with_quidax_costs(quidax, capsys, settings, tmp
                  min_trades=10)
     out = capsys.readouterr().out
     assert "Costs: fee 0.15%/side, spread 40 bps default" in out and "decision gate" in out
+
+
+def test_quidax_4h_frame_built_from_stored_hours(quidax, capsys):
+    call_command("load_quidax_history", symbols="ETHNGN", timeframes="1h", start="2026-01-01")
+    store = CandleStore({"ETHNGN": Instrument.objects.get(symbol="ETHNGN")})
+    frame = store.load_frame("ETHNGN", Timeframe.H4, START, NOW)
+    assert len(frame) == closed_count("ethngn", 60) // 4
+    hours = SERIES[("ethngn", 60)]
+    assert frame.iloc[0]["close"] == pytest.approx(hours.iloc[3]["close"], abs=0.01)

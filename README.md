@@ -45,8 +45,11 @@ Binance is blocked on many Nigerian networks; NEXTRADE uses Quidax (ADR 0005).
   SOLNGN, BTCUSDT and ETHUSDT (`--symbols`, `--timeframes`, `--start`). Rerun to update.
 - `record_quidax` polls every minute for new 1m candles and spreads. Let it run: the
   backtester uses the measured spreads as costs.
-- `run_backtest --timeframe 1h` (or `4h`) tests the strategies on the NGN pairs after
-  fees and spreads, with NGN 20,000 per test window.
+- Quidax only keeps its newest ~300 bars, so keep `record_quidax` running to build real
+  Quidax history.
+- For research history use Gate.io (read-only, reachable from Nigeria):
+  `load_gate_history`, then `run_backtest --venue gate --timeframe 4h`. That tests the
+  strategies on Gate.io prices while charging Quidax fees and spreads.
 
 ## Phase 2: market data (Binance)
 

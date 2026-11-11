@@ -8,7 +8,7 @@ Example:
 from __future__ import annotations
 
 import json
-from dataclasses import asdict
+from dataclasses import asdict, replace
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from pathlib import Path
@@ -35,7 +35,12 @@ class Command(BaseCommand):
     help = "Walk-forward backtest with costs, baselines and the go/no-go decision gate."
 
     def add_arguments(self, parser):
-        parser.add_argument("--venue", default=settings.NEXTRADE["VENUE"], choices=["quidax", "binance"])
+        parser.add_argument("--venue", default=settings.NEXTRADE["VENUE"], choices=["quidax", "binance", "gate"],
+                            help="where the price history comes from")
+        parser.add_argument("--costs", default=None, choices=["quidax", "binance"],
+                            help="whose fees and spreads to charge (default: quidax for gate data, else the venue)")
+        parser.add_argument("--ngn-per-usdt", default=None,
+                            help="rate for Quidax-cost research on USDT data (default: latest stored USDT/NGN, else 1400)")
         parser.add_argument("--symbols", default=None)
         parser.add_argument("--strategies", default=",".join(TRADABLE))
         parser.add_argument("--timeframe", default="15m", choices=[t.value for t in Timeframe if t is not Timeframe.M1])
@@ -51,6 +56,8 @@ class Command(BaseCommand):
     def handle(self, *args, **o):
         tf = Timeframe(o["timeframe"])
         venue = o["venue"]
+        cost_venue = o["costs"] or ("quidax" if venue == "gate" else venue)
+        proxy = venue != cost_venue == "quidax"      # e.g. Gate.io prices, Quidax costs
         capital = o["capital"] or ("20000" if venue == "quidax" else "1000")
         qs = Instrument.objects.filter(venue=venue)
         if o["symbols"]:
@@ -82,10 +89,22 @@ class Command(BaseCommand):
         if len(quotes_by_ccy) > 1:
             raise CommandError(f"Mixed quote currencies {sorted(quotes_by_ccy)}: pass --symbols with one quote "
                                "currency (e.g. ETHNGN,USDTNGN,BTCNGN,SOLNGN).")
+        spreads = measured_spreads_bps({s: instruments[s] for s in frames})
+        if proxy:
+            # Simulate trading on Quidax: NGN 20,000 and the NGN 1,250 minimum, converted to USDT;
+            # spreads measured on the matching Quidax NGN pair (e.g. ETHUSDT data -> ETHNGN spread).
+            rate = _ngn_per_usdt(o["ngn_per_usdt"])
+            capital = o["capital"] or str((Decimal(20000) / rate).quantize(Decimal("0.01")))
+            min_usdt = (Decimal(1250) / rate).quantize(Decimal("0.01"))
+            domain = {s: replace(d, min_notional=min_usdt) for s, d in domain.items()}
+            qx = {i.base: i for i in Instrument.objects.filter(venue="quidax", quote="NGN")}
+            qx_spreads = measured_spreads_bps({b: i for b, i in qx.items()})
+            spreads = {s: qx_spreads[instruments[s].base] for s in frames if instruments[s].base in qx_spreads}
+            self.stdout.write(f"{venue} prices, Quidax costs: capital {capital} USDT (NGN 20,000 at NGN {rate}/USDT), "
+                              f"minimum order {min_usdt} USDT")
         cfg = ResearchConfig(train=pd.Timedelta(days=o["train_days"]), test=pd.Timedelta(days=o["test_days"]),
                              model_kind=o["model"], initial_cash=Decimal(capital), min_trades=o["min_trades"])
-        spreads = measured_spreads_bps({s: instruments[s] for s in frames})
-        costs, risk = cost_model_for(venue, spreads), RiskEngine()
+        costs, risk = cost_model_for(cost_venue, spreads), RiskEngine()
         self.stdout.write(f"Costs: fee {costs.fee_rate:.2%}/side, spread {costs.spread_bps:.0f} bps default"
                           + (f", measured {spreads}" if spreads else " (no recorded spreads yet)"))
         out_dir = Path(settings.BASE_DIR) / "research" / "experiments"
@@ -123,3 +142,14 @@ class Command(BaseCommand):
                 baseline_summary=json.loads(json.dumps(b, default=str)), gate_pass=g["pass"],
                 gate=json.loads(json.dumps(g, default=str)), folds=json.loads(json.dumps(res.folds, default=str)))
             self.stdout.write(f"  record: {path.relative_to(settings.BASE_DIR)}")
+
+
+def _ngn_per_usdt(given: str | None) -> Decimal:
+    if given:
+        return Decimal(given)
+    last = (Instrument.objects.filter(venue="quidax", symbol="USDTNGN").first())
+    if last:
+        row = last.candles.order_by("-open_time").first()
+        if row:
+            return Decimal(row.close).quantize(Decimal("0.01"))
+    return Decimal(1400)
