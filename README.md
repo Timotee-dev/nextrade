@@ -51,6 +51,18 @@ Binance is blocked on many Nigerian networks; NEXTRADE uses Quidax (ADR 0005).
   `load_gate_history`, then `run_backtest --venue gate --timeframe 4h`. That tests the
   strategies on Gate.io prices while charging Quidax fees and spreads.
 
+## Paper trading on Quidax prices (T1)
+
+Fake money only. Signals come from Gate.io daily bars; fills use live Quidax prices; NEXTRADE
+holds the stops itself.
+
+```
+.venv\Scripts\python manage.py load_gate_history --timeframes 1d --symbols BTCUSDT,ETHUSDT,SOLUSDT,LTCUSDT,XRPUSDT,DASHUSDT,TRXUSDT
+.venv\Scripts\python manage.py run_paper_quidax --new-run
+```
+
+Rerun without `--new-run` to resume after a restart. Ctrl+C stops it safely.
+
 ## Phase 2: market data (Binance)
 
 ```cmd

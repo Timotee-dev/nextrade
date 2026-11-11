@@ -252,3 +252,35 @@ def test_naia_engine_end_to_end(market):
     assert all(a.score >= b.score for a, b in zip(ranked, ranked[1:]))
     with pytest.raises(ValueError):
         naia.set_models("trend", [], "x")
+
+
+# ------------------------------------------------------------------ rule-based strategies (ADR 0006)
+def _trend_signal(strategy="trendfilter"):
+    return Signal(strategy, "trendfilter-v1-test", "ETHUSDT", "1d", T0, Side.LONG,
+                  entry=2000.0, stop=1840.0, target=3600.0, max_hold_bars=365,
+                  invalidation="close below SMA200", invalidation_level=1900.0)
+
+
+def test_rule_based_signal_accepted_without_a_model():
+    from nextrade_core.naia.engine import Naia
+    naia = Naia(CostModel(), ScoringConfig(max_spread_bps=60.0))
+    naia.mark_rule_based(["trendfilter"])
+    opp = naia.evaluate(_trend_signal(), MarketContext(spread_bps=40.0))
+    assert opp.accepted and opp.p is None and opp.p_source == "rule-based"
+
+
+def test_rule_based_signal_still_obeys_the_venue_spread_limit():
+    from nextrade_core.naia.engine import Naia
+    quidax = Naia(CostModel(), ScoringConfig(max_spread_bps=60.0))
+    quidax.mark_rule_based(["trendfilter"])
+    assert not quidax.evaluate(_trend_signal(), MarketContext(spread_bps=75.0)).accepted
+    default = Naia(CostModel())                       # 15 bps default: a Quidax spread is rejected
+    default.mark_rule_based(["trendfilter"])
+    opp = default.evaluate(_trend_signal(), MarketContext(spread_bps=40.0))
+    assert not opp.accepted and Reason.SPREAD_TOO_WIDE in opp.reasons
+
+
+def test_unmarked_strategy_without_a_model_is_not_waved_through():
+    from nextrade_core.naia.engine import Naia
+    naia = Naia(CostModel(), ScoringConfig(max_spread_bps=60.0))
+    assert naia.evaluate(_trend_signal(), MarketContext(spread_bps=10.0)).p_source != "rule-based"

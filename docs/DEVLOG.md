@@ -2,6 +2,27 @@
 
 Newest first.
 
+## 2026-11-11 · T1 passed; Quidax paper trading built
+
+**T1 `trendfilter`** (pre-registered, daily, Gate.io prices with Quidax costs): 63 out-of-sample
+trades, mean net R +0.984 (95% CI +0.370 to +1.718), random baseline +0.439, profit factor 5.2,
+win rate 38.1%. PASS. **T2 `rotation`**: +0.493 (CI -0.016 to +1.113), below its baseline +0.764. FAIL.
+Caveats: about 6 trades a year; results lean on a few large winners; coin list chosen today
+(survivorship); Gate.io prices, not Quidax prices.
+
+**Built**: `run_paper_quidax`. Signals from Gate.io daily bars; fills simulated at live Quidax
+NGN bid/ask converted to USDT at the live USDT/NGN rate; NEXTRADE holds the stops itself (Quidax
+has no exchange stop orders). Only pre-registered, rule-based strategies are allowed.
+
+**Bugs found by the tests and fixed**:
+- NAIA had its own 15 bps spread limit separate from NARA's, so every Quidax signal
+  (spreads 13-58 bps) would have been rejected. NAIA now uses the venue limit (Quidax 60 bps).
+- Paper orders used Gate.io's minimum quantity (0.001 ETH, about 2 USDT) instead of Quidax's
+  rules (7-decimal quantities, NGN 1,250 minimum). That made small trades look unsizeable.
+- Backtests were not affected: they pass no live spread to NAIA, and T1 is judged on raw trades.
+
+**Tests**: 397 passing.
+
 ## 2026-11-11 · Confirmation failed; strategies T1 and T2 pre-registered
 
 **Confirmation test** (decided before running): daily breakout, unchanged, on 10 unseen coins.

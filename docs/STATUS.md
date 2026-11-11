@@ -1,6 +1,6 @@
 # NEXTRADE status
 
-Last updated: 2026-11-11 (pre-registered T1/T2)
+Last updated: 2026-11-11 (T1 passed; Quidax paper trading)
 
 | Stage | Phase | Status |
 | --- | --- | --- |
@@ -11,20 +11,22 @@ Last updated: 2026-11-11 (pre-registered T1/T2)
 | 2. Research | 4. Strategies A, C, D (+ filters B, E, F, G, random baseline) | Done, re-verified |
 | | 5. NAIA (regimes, labels, models, scoring) | Built; tests pass |
 | | 6. NARA (sizing, limits, stress, kill switch) | Built; tests pass |
-| | 7. Backtesting + decision gate (`run_backtest`) | A, C, D and daily breakout failed; T1/T2 pre-registered (ADR 0006), test pending |
+| | 7. Backtesting + decision gate (`run_backtest`) | T1 trendfilter PASSED (63 trades, +0.98R); T2 rotation and A, C, D, breakout failed |
 | 3. Trading machinery | 8. NCTPI (allocation, execution engine) | Built; tests pass |
 | | 9. NPEI (health, exits) | Built; tests pass |
-| | 10. Paper trading (`run_trader`, watchdog, paper broker) | Built on Binance-style venue stops; Quidax needs software stops (next) |
+| | 10. Paper trading (`run_trader`, watchdog, paper broker) | `run_paper_quidax` built (T1, Quidax prices, software stops); needs months of running |
 | 4. Platform and live | 11. Dashboard | Built; tests pass |
 | | 12. Telegram | Built; tests pass |
 | | 13. Adaptive learning (governance) | Built; tests pass |
 | | 14. Controlled live trading | Not started (live Binance broker, `go_live_check`, `run_live`) |
 | Capacity | 100 trades/day per market | Not yet load-tested |
 
-Tests: 391 passing, 94% line coverage. Phases 4-13 were first built in an earlier
+Tests: 397 passing, 94% line coverage. Phases 4-13 were first built in an earlier
 session whose log entries were lost; see the DEVLOG recovery note.
 
 ## Open items for the operator
+- Leave `python manage.py run_paper_quidax` running (start once with `--new-run`). T1 trades
+  about 6 times a year, so judging it takes months, not days. Check the dashboard weekly.
 - Run `python scripts\check_binance_access.py` and share the output.
 - Run `python manage.py load_binance_history`, then `python manage.py data_quality_report`.
 - Start `python manage.py record_live` and leave it running for 7 days; then run

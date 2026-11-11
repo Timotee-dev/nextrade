@@ -25,6 +25,7 @@ class Naia:
     costs: CostModel
     config: ScoringConfig = field(default_factory=ScoringConfig)
     models: dict[str, list[CalibratedModel]] = field(default_factory=dict)
+    rule_based: set[str] = field(default_factory=set)
     model_versions: dict[str, str] = field(default_factory=dict)
 
     def set_models(self, strategy: str, ensemble: list[CalibratedModel], version: str) -> None:
@@ -33,8 +34,23 @@ class Naia:
         self.models[strategy] = list(ensemble)
         self.model_versions[strategy] = version
 
+    def mark_rule_based(self, codes) -> None:
+        """Strategies with rule-based exits (ADR 0006): the hit-rate / model probability does not
+        describe them, so only the context checks (data, market, spread, liquidity, costs) apply."""
+        self.rule_based |= set(codes)
+
     def evaluate(self, signal: Signal, context: MarketContext) -> Opportunity:
         cost_r = self.costs.cost_in_r(signal.symbol, signal.entry, signal.stop)
+        if signal.strategy in self.rule_based:
+            from dataclasses import replace
+
+            from .scoring import Reason
+            opp = score_signal(signal, p=None, p_source="rule-based", uncertainty=0.0, cost_r=cost_r,
+                               context=context, config=self.config)
+            reasons = tuple(r for r in opp.reasons if r is not Reason.LOW_EXPECTED_VALUE)
+            explanation = {**opp.explanation, "rejected_for": [r.value for r in reasons],
+                           "note": "rule-based strategy (ADR 0006): judged on its tested raw record"}
+            return replace(opp, accepted=not reasons, reasons=reasons, score=0.0, explanation=explanation)
         ensemble = self.models.get(signal.strategy)
         if not ensemble:
             return score_signal(signal, p=None, p_source="none", uncertainty=0.0, cost_r=cost_r,
