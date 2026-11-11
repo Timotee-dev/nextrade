@@ -24,11 +24,11 @@ make_gate = lambda: GateClient()  # noqa: E731
 
 
 class Command(BaseCommand):
-    help = "Download Gate.io 1h/4h candles (research data; trading stays on Quidax)."
+    help = "Download Gate.io 1h/4h/1d candles (research data; trading stays on Quidax)."
 
     def add_arguments(self, parser):
         parser.add_argument("--symbols", default=DEFAULT_SYMBOLS)
-        parser.add_argument("--timeframes", default="1h,4h")
+        parser.add_argument("--timeframes", default="1h,4h,1d")
 
     def handle(self, *args, **o):
         symbols = [s.strip().upper() for s in o["symbols"].split(",") if s.strip()]

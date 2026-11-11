@@ -21,7 +21,7 @@ from apps.market.models import Instrument
 from apps.market.store import CandleStore
 from apps.research.models import ExperimentRun
 from nextrade_core.backtest.experiments import git_commit, write_record
-from nextrade_core.backtest.research import ResearchConfig, evaluate_strategy
+from nextrade_core.backtest.research import ResearchConfig, evaluate_strategy, parameter_sweep
 from apps.market.services import measured_spreads_bps
 from nextrade_core.costs.model import cost_model_for
 from nextrade_core.data.candles import Timeframe
@@ -52,6 +52,9 @@ class Command(BaseCommand):
         parser.add_argument("--capital", default=None,
                             help="starting cash per fold in the quote currency (default: 20000 NGN on quidax, 1000 USDT on binance)")
         parser.add_argument("--min-trades", type=int, default=100)
+        parser.add_argument("--sweep", default=None,
+                            help="one parameter across values for ONE strategy, e.g. reward_risk=2,3,4 "
+                                 "(look for a plateau, not the single best value)")
 
     def handle(self, *args, **o):
         tf = Timeframe(o["timeframe"])
@@ -109,11 +112,39 @@ class Command(BaseCommand):
                           + (f", measured {spreads}" if spreads else " (no recorded spreads yet)"))
         out_dir = Path(settings.BASE_DIR) / "research" / "experiments"
 
+        if o["sweep"]:
+            codes = [c.strip() for c in o["strategies"].split(",") if c.strip()]
+            if len(codes) != 1 or "=" not in o["sweep"]:
+                raise CommandError("--sweep needs exactly one --strategies value and the form param=v1,v2,...")
+            param, raw_values = o["sweep"].split("=", 1)
+            values = [int(v) if v.strip().lstrip("-").isdigit() else float(v) for v in raw_values.split(",")]
+            try:
+                make(codes[0], **{param.strip(): values[0]})
+            except TypeError as exc:
+                raise CommandError(f"{codes[0]} has no parameter {param!r}") from exc
+            table = parameter_sweep(codes[0], param.strip(), values, frames, domain, costs, risk, cfg)
+            self.stdout.write(f"\nSweep of {codes[0]}.{param.strip()} (out of sample, after costs):")
+            self.stdout.write(table.to_string(index=False))
+            write_record(out_dir, f"{codes[0]}_sweep_{param.strip()}",
+                         {"strategy": codes[0], "param": param.strip(), "timeframe": tf.value,
+                          "symbols": sorted(frames), "rows": json.loads(table.to_json(orient="records"))})
+            return
+
         for code in [c.strip() for c in o["strategies"].split(",") if c.strip()]:
             strategy = make(code)
             self.stdout.write(f"\n== {strategy.version} ({o['model']}) ==")
             res = evaluate_strategy(strategy, frames, domain, costs, risk, cfg)
             s, b, g = res.summary, res.baseline_summary, res.gate
+            d, raw = res.diagnostics, res.raw_summary
+            self.stdout.write(f"  signals: {d.get('signals', 0)} ({d.get('signals_per_day') or 0} per day)"
+                              + (f"   hit rate after costs: {d['label_hit_rate']:.1%}, mean {d['label_mean_r_net']:+.3f} R"
+                                 if d.get("label_hit_rate") is not None and d.get("label_mean_r_net") is not None else ""))
+            if raw.get("trades"):
+                self.stdout.write(f"  without the NAIA filter: {raw['trades']} trades, mean net R {raw['expectancy_r']:+.3f}, "
+                                  f"win rate {raw['win_rate']:.1%}")
+            if d.get("naia_rejections"):
+                top = sorted(d["naia_rejections"].items(), key=lambda kv: -kv[1])[:4]
+                self.stdout.write("  NAIA rejected: " + ", ".join(f"{k.split(':', 1)[-1]} x{v}" for k, v in top))
             self.stdout.write(f"  folds: {len(res.folds)}   out-of-sample trades: {s.get('trades', 0)}")
             if s.get("trades"):
                 ci = s.get("expectancy_r_ci95")
@@ -132,7 +163,7 @@ class Command(BaseCommand):
                        "symbols": sorted(frames), "period": [str(start), str(end)],
                        "feature_set": version_hash(FeatureParams()), "dataset_hash": res.dataset_hash,
                        "config": {k: str(v) for k, v in asdict(cfg).items()}, "summary": s,
-                       "baseline": b, "gate": g, "folds": res.folds}
+                       "baseline": b, "gate": g, "folds": res.folds, "raw": raw, "diagnostics": d}
             path = write_record(out_dir, code, payload)
             ExperimentRun.objects.create(
                 strategy_version=res.strategy, model_kind=o["model"], timeframe=tf.value, symbols=sorted(frames),

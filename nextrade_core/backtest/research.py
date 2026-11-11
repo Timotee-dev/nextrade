@@ -53,6 +53,8 @@ class ResearchResult:
     baseline_summary: dict
     gate: dict
     dataset_hash: str
+    raw_summary: dict = field(default_factory=dict)     # the strategy's own trades, NAIA filter off
+    diagnostics: dict = field(default_factory=dict)     # signal counts, rejection reasons, hit rates
 
 
 def _signals_in(signals: list[Signal], start, end) -> list[Signal]:
@@ -75,7 +77,8 @@ def evaluate_strategy(strategy: Strategy, frames: dict[str, pd.DataFrame], instr
 
     ds = build_dataset(frames, signals, costs)
     features = list(signals[0].features) if signals else []
-    folds, oos_trades, base_trades = [], [], []
+    folds, oos_trades, base_trades, raw_trades = [], [], [], []
+    rejections_total: dict[str, int] = {}
     if len(ds):
         for fold in walk_forward(ds["t"], ds["t_end"], cfg.train, cfg.test, embargo=cfg.embargo):
             train_ds = ds.iloc[fold.train_idx]
@@ -87,6 +90,12 @@ def evaluate_strategy(strategy: Strategy, frames: dict[str, pd.DataFrame], instr
                            for sym, f in frames.items()}
             bt = Backtester(test_frames, instruments, costs, risk, cfg.initial_cash, scorer=scorer)
             res = bt.run(_signals_in(signals, fold.test_start, fold.test_end))
+            raw_res = Backtester(test_frames, instruments, costs, risk, cfg.initial_cash).run(
+                _signals_in(signals, fold.test_start, fold.test_end))
+            if len(raw_res.trades):
+                raw_trades.append(raw_res.trades.assign(fold=fold.number))
+            for k, v in res.rejections.items():
+                rejections_total[k] = rejections_total.get(k, 0) + v
             base_bt = Backtester(test_frames, instruments, costs, risk, cfg.initial_cash)
             base_res = base_bt.run(_signals_in(base_signals, fold.test_start, fold.test_end))
             if len(res.trades):
@@ -94,7 +103,8 @@ def evaluate_strategy(strategy: Strategy, frames: dict[str, pd.DataFrame], instr
             if len(base_res.trades):
                 base_trades.append(base_res.trades.assign(fold=fold.number))
             folds.append({"fold": fold.number, "test_start": str(fold.test_start), "test_end": str(fold.test_end),
-                          "train_signals": len(train_ds), "model": model.kind, "model_notes": model.notes,
+                          "train_signals": len(train_ds), "train_hit_rate": round(model.base_rate, 4),
+                          "model": model.kind, "model_notes": model.notes,
                           **{k: v for k, v in summarize(res.trades, res.equity, float(cfg.initial_cash)).items()
                              if k in ("trades", "net_return", "expectancy_r", "max_drawdown", "win_rate")},
                           "funnel": dict(res.funnel), "rejections": dict(res.rejections), "halts": res.events})
@@ -104,7 +114,24 @@ def evaluate_strategy(strategy: Strategy, frames: dict[str, pd.DataFrame], instr
     summary = _pooled_summary(trades, cfg)
     base_summary = _pooled_summary(btrades, cfg)
     gate = decision_gate(trades, btrades, cfg.min_trades)
-    return ResearchResult(strategy.version, folds, trades, summary, base_summary, gate, dataset_hash(ds))
+    rtrades = pd.concat(raw_trades, ignore_index=True) if raw_trades else pd.DataFrame()
+    labelled = ds if len(ds) else None
+    diagnostics = {
+        "signals": len(signals), "signals_per_day": _per_day(signals),
+        "labelled_signals": int(len(ds)),
+        "label_hit_rate": float(labelled["y"].mean()) if labelled is not None else None,
+        "label_mean_r_net": float(labelled["r_net"].mean()) if labelled is not None and "r_net" in labelled else None,
+        "naia_rejections": rejections_total,
+    }
+    return ResearchResult(strategy.version, folds, trades, summary, base_summary, gate, dataset_hash(ds),
+                          _pooled_summary(rtrades, cfg), diagnostics)
+
+
+def _per_day(signals: list[Signal]) -> float | None:
+    if len(signals) < 2:
+        return None
+    days = (signals[-1].decision_time - signals[0].decision_time).total_seconds() / 86400
+    return round(len(signals) / days, 3) if days > 0 else None
 
 
 def _pooled_summary(trades: pd.DataFrame, cfg: ResearchConfig) -> dict:
@@ -152,7 +179,9 @@ def parameter_sweep(code: str, param: str, values: list, frames, instruments, co
     rows = []
     for v in values:
         res = evaluate_strategy(make(code, **{param: v}), frames, instruments, costs, risk, cfg)
+        raw = res.raw_summary
         rows.append({param: v, "trades": res.gate["trades"], "mean_r": res.gate["mean_r"],
                      "ci_low": res.gate["mean_r_ci95"][0] if res.gate["mean_r_ci95"] else None,
+                     "raw_trades": raw.get("trades", 0), "raw_mean_r": raw.get("expectancy_r"),
                      "gate": res.gate["pass"]})
     return pd.DataFrame(rows)

@@ -2,6 +2,31 @@
 
 Newest first.
 
+## 2026-11-11 · First real research result: no-go for A, C, D at Quidax costs
+
+**Run** (operator's PC): Gate.io prices for ETH, BTC, SOL; Quidax costs (0.15% fee per
+side, 40 bps spread); NGN 20,000 as 14.27 USDT; NGN 1,250 minimum as 0.89 USDT.
+
+| Run | Strategy | Out-of-sample trades | Random-entry baseline |
+| --- | --- | --- | --- |
+| 4h, 365/90-day folds (14 folds) | trend | 0 (NAIA rejected all) | 94 trades, -0.140 R |
+| | breakout | 0 (NAIA rejected all) | 175 trades, -0.424 R |
+| | meanrev | no signals at all | - |
+| 1h, 180/45-day folds | trend | 0 | 165 trades, -0.605 R |
+| | breakout | 0 | 160 trades, -0.777 R |
+| | meanrev | no signals | - |
+
+**Reading**: in every fold, the training-window hit rate implied negative expected value
+after costs, so NAIA refused to trade: the no-trade rule worked as designed. Gate: FAIL.
+
+**Built to understand it better**
+- The report now shows signal counts, the hit rate and mean R after costs of every signal,
+  results with the NAIA filter switched off, and NAIA's rejection reasons.
+- `run_backtest --sweep param=v1,v2,...` for one strategy (look for a plateau).
+- Gate.io daily bars (`load_gate_history` now loads 1h, 4h and 1d).
+
+**Tests**: 380 passing.
+
 ## 2026-11-11 · Research history from Gate.io; Quidax limits measured
 
 **Found on the operator's network**

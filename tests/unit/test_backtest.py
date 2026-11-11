@@ -187,6 +187,12 @@ def test_gate_fails_on_a_market_with_no_edge():
     # NAIA sees a hit rate near 1/3 at 2:1, i.e. negative expected value, and trades nothing
     assert res.folds and all(f["funnel"].get("rejected_by_naia") == f["funnel"]["signals"] for f in res.folds)
     assert res.gate["pass"] is False and res.dataset_hash != "empty"
+    # ...but the report still shows what the strategy itself would have done, and why NAIA said no
+    assert res.summary["trades"] == 0 and res.raw_summary["trades"] > 0
+    d = res.diagnostics
+    assert d["signals"] > 0 and d["labelled_signals"] > 0 and 0 < d["label_hit_rate"] < 1
+    assert sum(d["naia_rejections"].values()) >= sum(f["funnel"]["signals"] for f in res.folds)
+    assert all("train_hit_rate" in f for f in res.folds)
 
     # Forcing NAIA to accept everything: trades happen, and the gate still says no
     from nextrade_core.naia.scoring import ScoringConfig

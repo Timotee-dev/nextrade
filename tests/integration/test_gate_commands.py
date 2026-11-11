@@ -80,3 +80,21 @@ def test_backtest_on_gate_prices_with_quidax_costs(gate, capsys, settings, tmp_p
     assert "gate prices, Quidax costs: capital 14.29 USDT (NGN 20,000 at NGN 1400/USDT), minimum order 0.89 USDT" in out
     assert "Costs: fee 0.15%/side, spread 40 bps default" in out and "decision gate" in out
     assert ExperimentRun.objects.count() == 1
+
+
+def test_sweep_prints_a_table_with_raw_results(gate, capsys, settings, tmp_path):
+    call_command("load_gate_history", symbols="ETHUSDT", timeframes="1h")
+    settings.BASE_DIR = tmp_path
+    call_command("run_backtest", venue="gate", timeframe="1h", strategies="trend", train_days=60, test_days=20,
+                 min_trades=10, ngn_per_usdt="1400", sweep="reward_risk=2,3")
+    out = capsys.readouterr().out
+    assert "Sweep of trend.reward_risk" in out and "raw_mean_r" in out
+    assert len(list((tmp_path / "research" / "experiments").glob("*sweep*.json"))) == 1
+
+
+def test_sweep_rejects_unknown_parameter(gate, settings, tmp_path):
+    from django.core.management.base import CommandError
+    call_command("load_gate_history", symbols="ETHUSDT", timeframes="1h")
+    with pytest.raises(CommandError, match="no parameter"):
+        call_command("run_backtest", venue="gate", timeframe="1h", strategies="trend", sweep="nonsense=1,2",
+                     ngn_per_usdt="1400", train_days=60, test_days=20)
