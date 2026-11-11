@@ -1,0 +1,50 @@
+{
+  "written_at": "20261111T190959Z",
+  "git_commit": "395cfd1",
+  "strategy": "trend",
+  "param": "reward_risk",
+  "timeframe": "4h",
+  "symbols": [
+    "BTCUSDT",
+    "ETHUSDT",
+    "SOLUSDT"
+  ],
+  "rows": [
+    {
+      "reward_risk": 2,
+      "trades": 0,
+      "mean_r": null,
+      "ci_low": null,
+      "raw_trades": 81,
+      "raw_mean_r": -0.3837445455,
+      "gate": false
+    },
+    {
+      "reward_risk": 3,
+      "trades": 0,
+      "mean_r": null,
+      "ci_low": null,
+      "raw_trades": 74,
+      "raw_mean_r": -0.3953455482,
+      "gate": false
+    },
+    {
+      "reward_risk": 4,
+      "trades": 0,
+      "mean_r": null,
+      "ci_low": null,
+      "raw_trades": 73,
+      "raw_mean_r": -0.308961297,
+      "gate": false
+    },
+    {
+      "reward_risk": 5,
+      "trades": 0,
+      "mean_r": null,
+      "ci_low": null,
+      "raw_trades": 72,
+      "raw_mean_r": -0.2711914861,
+      "gate": false
+    }
+  ]
+}

@@ -171,3 +171,21 @@ def test_never_blind_close_when_venue_unverified():
 def test_limits_serialise():
     d = RiskLimits().as_dict()
     assert d["risk_per_trade"] == "0.0025" and d["max_positions"] == 10
+
+
+def test_scaled_limits_scale_cross_trade_limits_only():
+    from decimal import Decimal as D
+
+    from nextrade_core.nara.limits import RiskLimits, scaled_limits
+    base = RiskLimits()
+    one = scaled_limits(D("0.01"), "quidax")
+    assert one.risk_per_trade == D("0.01") and one.max_open_risk == D("0.08")
+    assert one.max_cluster_risk == D("0.06") and one.max_stress_loss == D("0.16")
+    assert (one.daily_loss, one.weekly_loss, one.max_drawdown) == (base.daily_loss, base.weekly_loss, base.max_drawdown)
+    assert one.max_spread_bps == D("60") and scaled_limits(D("0.0025")).max_spread_bps == D("15")
+    capped = scaled_limits(D("0.02"))
+    assert capped.max_open_risk == D("0.10") and capped.max_cluster_risk == D("0.08")
+    assert "r0.01" in one.version
+    for bad in (D("0"), D("0.03")):
+        with pytest.raises(ValueError):
+            scaled_limits(bad)

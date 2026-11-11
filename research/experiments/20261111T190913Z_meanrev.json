@@ -1,0 +1,57 @@
+{
+  "written_at": "20261111T190913Z",
+  "git_commit": "395cfd1",
+  "strategy": "meanrev-v1-8b382606",
+  "model": "hitrate",
+  "timeframe": "1d",
+  "symbols": [
+    "BTCUSDT",
+    "ETHUSDT",
+    "SOLUSDT"
+  ],
+  "period": [
+    "2013-03-31 00:00:00+00:00",
+    "2026-11-11 19:09:10.630983+00:00"
+  ],
+  "feature_set": "fs-1-7fd6cd9102",
+  "dataset_hash": "242e34684724ce50",
+  "config": {
+    "train": "730 days 00:00:00",
+    "test": "180 days 00:00:00",
+    "embargo": "1 days 00:00:00",
+    "model_kind": "hitrate",
+    "initial_cash": "14.27",
+    "min_trades": "30",
+    "scoring": "{'hurdle_r': 0.1, 'uncertainty_k': 1.0, 'max_uncertainty': 0.15, 'max_spread_bps': 15.0, 'min_quote_volume_24h': 1000000.0, 'allowed_regimes': {}}"
+  },
+  "summary": {
+    "trades": 0
+  },
+  "baseline": {
+    "trades": 0
+  },
+  "gate": {
+    "pass": false,
+    "reasons": [
+      "only 0 out-of-sample trades; need at least 30",
+      "95% interval of mean net R does not lie above zero",
+      "does not beat the random-entry baseline"
+    ],
+    "trades": 0,
+    "mean_r": null,
+    "mean_r_ci95": null,
+    "baseline_mean_r": null
+  },
+  "folds": [],
+  "raw": {
+    "trades": 0
+  },
+  "diagnostics": {
+    "signals": 4,
+    "signals_per_day": 0.002,
+    "labelled_signals": 4,
+    "label_hit_rate": 0.25,
+    "label_mean_r_net": -0.3836695704579526,
+    "naia_rejections": {}
+  }
+}

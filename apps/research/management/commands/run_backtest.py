@@ -28,6 +28,7 @@ from nextrade_core.data.candles import Timeframe
 from nextrade_core.features.feature_set import FeatureParams, version_hash, with_features
 from nextrade_core.ml.models import MODEL_KINDS
 from nextrade_core.nara.engine import RiskEngine
+from nextrade_core.nara.limits import RiskLimits, scaled_limits
 from nextrade_core.strategies.registry import TRADABLE, make
 
 
@@ -52,6 +53,9 @@ class Command(BaseCommand):
         parser.add_argument("--capital", default=None,
                             help="starting cash per fold in the quote currency (default: 20000 NGN on quidax, 1000 USDT on binance)")
         parser.add_argument("--min-trades", type=int, default=100)
+        parser.add_argument("--risk-per-trade", default=None,
+                            help="fraction of equity risked per trade, e.g. 0.01 = 1%% (default 0.0025). "
+                                 "Total-open, cluster and stress limits scale with it; loss limits do not.")
         parser.add_argument("--sweep", default=None,
                             help="one parameter across values for ONE strategy, e.g. reward_risk=2,3,4 "
                                  "(look for a plateau, not the single best value)")
@@ -107,7 +111,12 @@ class Command(BaseCommand):
                               f"minimum order {min_usdt} USDT")
         cfg = ResearchConfig(train=pd.Timedelta(days=o["train_days"]), test=pd.Timedelta(days=o["test_days"]),
                              model_kind=o["model"], initial_cash=Decimal(capital), min_trades=o["min_trades"])
-        costs, risk = cost_model_for(cost_venue, spreads), RiskEngine()
+        limits = scaled_limits(Decimal(o["risk_per_trade"]) if o["risk_per_trade"] else RiskLimits().risk_per_trade,
+                               cost_venue)
+        costs, risk = cost_model_for(cost_venue, spreads), RiskEngine(limits)
+        self.stdout.write(f"Risk: {limits.risk_per_trade:.2%} per trade, open risk {limits.max_open_risk:.1%}, "
+                          f"cluster {limits.max_cluster_risk:.1%}, stress {limits.max_stress_loss:.0%}, "
+                          f"daily loss {limits.daily_loss:.0%}, drawdown stop {limits.max_drawdown:.0%}")
         self.stdout.write(f"Costs: fee {costs.fee_rate:.2%}/side, spread {costs.spread_bps:.0f} bps default"
                           + (f", measured {spreads}" if spreads else " (no recorded spreads yet)"))
         out_dir = Path(settings.BASE_DIR) / "research" / "experiments"

@@ -2,6 +2,33 @@
 
 Newest first.
 
+## 2026-11-11 · Daily bars: first positive signal, blocked by position sizing
+
+**Run** (Gate.io prices, Quidax costs, NGN 20,000):
+
+| Timeframe | Strategy | Signals | Hit rate after costs | Mean net R per signal | Walk-forward trades |
+| --- | --- | --- | --- | --- | --- |
+| 1d | breakout | 149 | 51.0% | +0.337 | 0 (sizing) |
+| 1d | trend | 286 | 40.6% | +0.182 | 0 (sizing, some low EV) |
+| 1d | meanrev | 4 | 25.0% | -0.384 | 0 |
+| 4h | trend | 644 | 30.4% | -0.196 | 0; unfiltered 81 trades at -0.384 R |
+| 4h | breakout | 444 | 35.8% | -0.333 | 0; unfiltered 200 trades at -0.430 R |
+| 4h | trend sweep reward_risk 2-5 | - | - | - | unfiltered -0.38 to -0.27 R: no plateau |
+
+**Reading**: 4h is dead at Quidax costs. Daily breakout and trend are positive per signal
+over 2013-2026, with default parameters never tuned on this data. That is a hypothesis,
+not an edge yet: it has not passed walk-forward with real position sizing.
+
+**Why 0 daily trades**: a daily stop is ~8-10% away. At 0.25% risk of NGN 20,000 (NGN 50)
+the position would be ~NGN 500, below Quidax's NGN 1,250 minimum; forcing the minimum
+breaks the risk limit, so NARA refuses ("size_valid", "trade_risk_within_limit").
+
+**Built**: `scaled_limits()` and `run_backtest --risk-per-trade`: the cross-trade limits
+(open risk, cluster, stress) scale with risk per trade; loss limits do not. Venue spread
+limits: the Binance-calibrated 15 bps would have blocked every Quidax trade; Quidax: 60.
+
+**Tests**: 382 passing.
+
 ## 2026-11-11 · First real research result: no-go for A, C, D at Quidax costs
 
 **Run** (operator's PC): Gate.io prices for ETH, BTC, SOL; Quidax costs (0.15% fee per
