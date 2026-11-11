@@ -31,7 +31,24 @@ python scripts\check_binance_access.py
 
 Each run saves a JSON report in `reports/`.
 
-## Phase 2: market data
+## Quidax (default crypto venue)
+
+Binance is blocked on many Nigerian networks; NEXTRADE uses Quidax (ADR 0005).
+
+```cmd
+.venv\Scripts\python manage.py load_quidax_history
+.venv\Scripts\python manage.py record_quidax
+.venv\Scripts\python manage.py run_backtest --timeframe 1h
+```
+
+- `load_quidax_history` downloads native 1h and 4h candles for ETHNGN, USDTNGN, BTCNGN,
+  SOLNGN, BTCUSDT and ETHUSDT (`--symbols`, `--timeframes`, `--start`). Rerun to update.
+- `record_quidax` polls every minute for new 1m candles and spreads. Let it run: the
+  backtester uses the measured spreads as costs.
+- `run_backtest --timeframe 1h` (or `4h`) tests the strategies on the NGN pairs after
+  fees and spreads, with NGN 20,000 per test window.
+
+## Phase 2: market data (Binance)
 
 ```cmd
 python manage.py load_binance_history

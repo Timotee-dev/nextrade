@@ -2,6 +2,28 @@
 
 Newest first.
 
+## 2026-11-11 · Quidax market data (crypto venue switch)
+
+**Why**: Binance, its data archive and Bybit are blocked on the operator's network (DNS
+fails; Google resolves). See ADR 0005.
+
+**Built**
+- `adapters/quidax/rest.py`: Quidax client. Public: markets, tickers, k-lines, depth.
+  Authenticated: wallets, create/get/list/cancel orders. Bearer auth, request spacing under
+  300/minute, HTTP 444 treated as rate limiting, unknown outcomes on order timeouts.
+- `adapters/quidax/markets.py`: parsing of real response formats, including the
+  open-close-high-low k-line order. Market rules become Instruments (min order NGN 1,250).
+- `load_quidax_history` (native 1h/4h by default, paged, resumable) and `record_quidax`
+  (1m candles + spread samples every minute).
+- Venue cost presets (`cost_model_for`); `run_backtest --venue quidax` uses measured
+  spreads and NGN capital (default NGN 20,000), and keeps one quote currency per run.
+- `CandleStore.load_frame` uses native bars at a timeframe when stored.
+- Settings: empty .env values now fall back to defaults (fixes the DATABASE_URL= crash).
+
+**Tests**: 369 passing. Fixtures are the operator's real Quidax responses.
+
+**Not verified yet**: how far back Quidax history goes, and any authenticated call.
+
 ## 2026-11-11 · Recovery note and Phase 4 strategies
 
 **What happened.** Between 14:14 and 14:50 an earlier build session produced code for

@@ -22,7 +22,8 @@ from apps.market.store import CandleStore
 from apps.research.models import ExperimentRun
 from nextrade_core.backtest.experiments import git_commit, write_record
 from nextrade_core.backtest.research import ResearchConfig, evaluate_strategy
-from nextrade_core.costs.model import CostModel
+from apps.market.services import measured_spreads_bps
+from nextrade_core.costs.model import cost_model_for
 from nextrade_core.data.candles import Timeframe
 from nextrade_core.features.feature_set import FeatureParams, version_hash, with_features
 from nextrade_core.ml.models import MODEL_KINDS
@@ -34,6 +35,7 @@ class Command(BaseCommand):
     help = "Walk-forward backtest with costs, baselines and the go/no-go decision gate."
 
     def add_arguments(self, parser):
+        parser.add_argument("--venue", default=settings.NEXTRADE["VENUE"], choices=["quidax", "binance"])
         parser.add_argument("--symbols", default=None)
         parser.add_argument("--strategies", default=",".join(TRADABLE))
         parser.add_argument("--timeframe", default="15m", choices=[t.value for t in Timeframe if t is not Timeframe.M1])
@@ -42,17 +44,20 @@ class Command(BaseCommand):
         parser.add_argument("--end", help="YYYY-MM-DD (default: now)")
         parser.add_argument("--train-days", type=int, default=365)
         parser.add_argument("--test-days", type=int, default=90)
-        parser.add_argument("--capital", default="1000", help="starting cash in USDT for each fold")
+        parser.add_argument("--capital", default=None,
+                            help="starting cash per fold in the quote currency (default: 20000 NGN on quidax, 1000 USDT on binance)")
         parser.add_argument("--min-trades", type=int, default=100)
 
     def handle(self, *args, **o):
         tf = Timeframe(o["timeframe"])
-        qs = Instrument.objects.filter(venue="binance")
+        venue = o["venue"]
+        capital = o["capital"] or ("20000" if venue == "quidax" else "1000")
+        qs = Instrument.objects.filter(venue=venue)
         if o["symbols"]:
             qs = qs.filter(symbol__in=[s.strip().upper() for s in o["symbols"].split(",")])
         instruments = {i.symbol: i for i in qs if i.candles.exists()}
         if not instruments:
-            raise CommandError("No stored candles. Run load_binance_history first.")
+            raise CommandError(f"No stored {venue} candles. Run load_{venue}_history first.")
         store = CandleStore(instruments)
         start = datetime.fromisoformat(o["start"]).replace(tzinfo=UTC) if o["start"] else \
             min(i.candles.order_by("open_time").first().open_time for i in instruments.values())
@@ -67,9 +72,22 @@ class Command(BaseCommand):
         if not frames:
             raise CommandError("Not enough bars for features. Load more history.")
         domain = {s: instruments[s].to_domain() for s in frames}
+        quotes_by_ccy = {i.quote for i in instruments.values() if i.symbol in frames}
+        if len(quotes_by_ccy) > 1 and not o["symbols"]:
+            home = "NGN" if venue == "quidax" else "USDT"
+            frames = {s: f for s, f in frames.items() if instruments[s].quote == home}
+            self.stdout.write(f"Using {home}-quoted symbols only: {', '.join(sorted(frames))}")
+            quotes_by_ccy = {home}
+            domain = {s: instruments[s].to_domain() for s in frames}
+        if len(quotes_by_ccy) > 1:
+            raise CommandError(f"Mixed quote currencies {sorted(quotes_by_ccy)}: pass --symbols with one quote "
+                               "currency (e.g. ETHNGN,USDTNGN,BTCNGN,SOLNGN).")
         cfg = ResearchConfig(train=pd.Timedelta(days=o["train_days"]), test=pd.Timedelta(days=o["test_days"]),
-                             model_kind=o["model"], initial_cash=Decimal(o["capital"]), min_trades=o["min_trades"])
-        costs, risk = CostModel(), RiskEngine()
+                             model_kind=o["model"], initial_cash=Decimal(capital), min_trades=o["min_trades"])
+        spreads = measured_spreads_bps({s: instruments[s] for s in frames})
+        costs, risk = cost_model_for(venue, spreads), RiskEngine()
+        self.stdout.write(f"Costs: fee {costs.fee_rate:.2%}/side, spread {costs.spread_bps:.0f} bps default"
+                          + (f", measured {spreads}" if spreads else " (no recorded spreads yet)"))
         out_dir = Path(settings.BASE_DIR) / "research" / "experiments"
 
         for code in [c.strip() for c in o["strategies"].split(",") if c.strip()]:

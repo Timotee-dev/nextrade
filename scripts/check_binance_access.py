@@ -156,10 +156,10 @@ def check_testnet_order(client: BinanceRest, symbol: str, report: dict) -> bool:
 def main() -> int:
     load_dotenv(ROOT / ".env")
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument("--symbols", default=os.getenv("NEXTRADE_M0_SYMBOLS", DEFAULT_SYMBOLS))
-    parser.add_argument("--ngn-per-usdt", default=os.getenv("NGN_PER_USDT", "1500"),
+    parser.add_argument("--symbols", default=os.getenv("NEXTRADE_M0_SYMBOLS") or DEFAULT_SYMBOLS)
+    parser.add_argument("--ngn-per-usdt", default=os.getenv("NGN_PER_USDT") or "1500",
                         help="your current naira rate, for display only")
-    parser.add_argument("--base-url", default=os.getenv("BINANCE_BASE_URL", MAINNET_URL))
+    parser.add_argument("--base-url", default=os.getenv("BINANCE_BASE_URL") or MAINNET_URL)
     parser.add_argument("--testnet-order", action="store_true", help="run part 3")
     parser.add_argument("--testnet-symbol", default="BTCUSDT")
     args = parser.parse_args()

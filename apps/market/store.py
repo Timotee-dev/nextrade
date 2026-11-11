@@ -89,10 +89,13 @@ class CandleStore:
             cursor = rows[-1][0] + timeframe.delta
 
     def load_frame(self, symbol: str, timeframe: Timeframe, start: datetime, end: datetime) -> pd.DataFrame:
-        """Float OHLCV frame at any timeframe, resampled from stored 1m bars.
-
-        Only complete higher-timeframe bars are included (see nextrade_core.data.resample).
+        """Float OHLCV frame at any timeframe: native bars at that timeframe if stored,
+        otherwise resampled from stored 1m bars (complete buckets only).
         """
+        if timeframe is not Timeframe.M1:
+            native = [c for chunk in self.iter_candles(symbol, start, end, timeframe) for c in chunk]
+            if native:  # stored at this timeframe already (e.g. Quidax native 1h/4h k-lines)
+                return candles_to_frame(native)
         bars = [c for chunk in self.iter_candles(symbol, start, end) for c in chunk]
         if timeframe is not Timeframe.M1:
             bars = resample(bars, timeframe).candles

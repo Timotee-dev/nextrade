@@ -26,7 +26,7 @@ def seed_minutes(symbol: str, days: int, seed: int) -> None:
 def test_run_backtest_end_to_end(settings, tmp_path, capsys):
     settings.BASE_DIR = tmp_path
     seed_minutes("AAAUSDT", 75, seed=3)
-    call_command("run_backtest", timeframe="1h", strategies="trend,breakout", model="hitrate",
+    call_command("run_backtest", venue="binance", timeframe="1h", strategies="trend,breakout", model="hitrate",
                  train_days=20, test_days=10, min_trades=20)
     out = capsys.readouterr().out
     assert "decision gate" in out and "trend-v1-" in out and "breakout-v1-" in out
@@ -38,5 +38,5 @@ def test_run_backtest_end_to_end(settings, tmp_path, capsys):
 
 def test_run_backtest_without_data_fails_clearly():
     from django.core.management.base import CommandError
-    with pytest.raises(CommandError, match="No stored candles"):
+    with pytest.raises(CommandError, match="No stored quidax candles"):
         call_command("run_backtest")

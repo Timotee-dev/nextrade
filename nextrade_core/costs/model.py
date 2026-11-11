@@ -40,3 +40,17 @@ class CostModel:
         if risk <= 0:
             raise ValueError("entry must be above stop")
         return self.round_trip_fraction(symbol) * entry / risk
+
+
+# Starting cost assumptions per venue. Measured spreads (QuoteSample) override spread_bps.
+VENUE_COSTS = {
+    # Binance spot standard tier: 0.1% per side, tight books on major USDT pairs.
+    "binance": dict(fee_rate=0.001, spread_bps=2.0, slippage_bps=2.0),
+    # Quidax: 0.1% advertised, up to 0.15% taker reported, so 0.15% is assumed. NGN books are
+    # thin: spreads of 18 to 50 bps were observed on 2026-11-11 (ETH/NGN 18, BTC/NGN 49).
+    "quidax": dict(fee_rate=0.0015, spread_bps=40.0, slippage_bps=5.0),
+}
+
+
+def cost_model_for(venue: str, spread_bps_by_symbol: dict[str, float] | None = None) -> CostModel:
+    return CostModel(**VENUE_COSTS[venue], spread_bps_by_symbol=dict(spread_bps_by_symbol or {}))
