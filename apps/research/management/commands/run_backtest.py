@@ -53,6 +53,8 @@ class Command(BaseCommand):
         parser.add_argument("--capital", default=None,
                             help="starting cash per fold in the quote currency (default: 20000 NGN on quidax, 1000 USDT on binance)")
         parser.add_argument("--min-trades", type=int, default=100)
+        parser.add_argument("--expanding", action="store_true",
+                            help="each test window trains on ALL earlier data (use for rare daily signals)")
         parser.add_argument("--risk-per-trade", default=None,
                             help="fraction of equity risked per trade, e.g. 0.01 = 1%% (default 0.0025). "
                                  "Total-open, cluster and stress limits scale with it; loss limits do not.")
@@ -110,7 +112,8 @@ class Command(BaseCommand):
             self.stdout.write(f"{venue} prices, Quidax costs: capital {capital} USDT (NGN 20,000 at NGN {rate}/USDT), "
                               f"minimum order {min_usdt} USDT")
         cfg = ResearchConfig(train=pd.Timedelta(days=o["train_days"]), test=pd.Timedelta(days=o["test_days"]),
-                             model_kind=o["model"], initial_cash=Decimal(capital), min_trades=o["min_trades"])
+                             model_kind=o["model"], initial_cash=Decimal(capital), min_trades=o["min_trades"],
+                             expanding=o["expanding"])
         limits = scaled_limits(Decimal(o["risk_per_trade"]) if o["risk_per_trade"] else RiskLimits().risk_per_trade,
                                cost_venue)
         costs, risk = cost_model_for(cost_venue, spreads), RiskEngine(limits)

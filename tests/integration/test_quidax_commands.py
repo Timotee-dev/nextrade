@@ -136,3 +136,15 @@ def test_quidax_4h_frame_built_from_stored_hours(quidax, capsys):
     assert len(frame) == closed_count("ethngn", 60) // 4
     hours = SERIES[("ethngn", 60)]
     assert frame.iloc[0]["close"] == pytest.approx(hours.iloc[3]["close"], abs=0.01)
+
+
+def test_quidax_markets_ranks_by_ngn_volume(monkeypatch, capsys):
+    from apps.market.management.commands import quidax_markets as qm_cmd
+    calls = []
+    monkeypatch.setattr(qm_cmd, "make_quidax", lambda: QuidaxRest(
+        "https://q.test/api/v1", transport=httpx.MockTransport(quidax_handler(calls)), sleep=lambda s: None))
+    call_command("quidax_markets")
+    lines = [l for l in capsys.readouterr().out.splitlines() if l[:6] in ("USDTNG", "BTCNGN", "ETHNGN")]
+    assert [l.split()[0] for l in lines] == ["USDTNGN", "BTCNGN", "ETHNGN"]      # 1.77bn, 120m, 13m NGN
+    eth = next(l for l in lines if l.startswith("ETHNGN"))
+    assert "18.3" in eth and "too wide" not in eth

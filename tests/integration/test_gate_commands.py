@@ -107,3 +107,16 @@ def test_risk_per_trade_option_scales_limits(gate, capsys, settings, tmp_path):
                  min_trades=10, ngn_per_usdt="1400", risk_per_trade="0.01")
     out = capsys.readouterr().out
     assert "Risk: 1.00% per trade, open risk 8.0%, cluster 6.0%, stress 16%, daily loss 2%, drawdown stop 10%" in out
+
+
+def test_expanding_window_tests_more_of_the_history(gate, capsys, settings, tmp_path):
+    import re
+    call_command("load_gate_history", symbols="ETHUSDT", timeframes="1h")
+    settings.BASE_DIR = tmp_path
+    common = dict(venue="gate", timeframe="1h", strategies="breakout", train_days=90, test_days=20,
+                  min_trades=5, ngn_per_usdt="1400")
+    call_command("run_backtest", **common)
+    rolling = int(re.search(r"folds: (\d+)", capsys.readouterr().out).group(1))
+    call_command("run_backtest", expanding=True, **common)
+    expanding = int(re.search(r"folds: (\d+)", capsys.readouterr().out).group(1))
+    assert expanding >= rolling and expanding > 0

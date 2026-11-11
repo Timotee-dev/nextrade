@@ -1,6 +1,6 @@
 # NEXTRADE status
 
-Last updated: 2026-11-11 (daily-bar research)
+Last updated: 2026-11-11 (daily walk-forward)
 
 | Stage | Phase | Status |
 | --- | --- | --- |
@@ -11,7 +11,7 @@ Last updated: 2026-11-11 (daily-bar research)
 | 2. Research | 4. Strategies A, C, D (+ filters B, E, F, G, random baseline) | Done, re-verified |
 | | 5. NAIA (regimes, labels, models, scoring) | Built; tests pass |
 | | 6. NARA (sizing, limits, stress, kill switch) | Built; tests pass |
-| | 7. Backtesting + decision gate (`run_backtest`) | 4h: FAIL. 1d breakout/trend positive per signal; needs walk-forward with workable sizing |
+| | 7. Backtesting + decision gate (`run_backtest`) | Daily breakout: candidate (10 OOS trades, +0.60 R); confirmation on unseen coins pending |
 | 3. Trading machinery | 8. NCTPI (allocation, execution engine) | Built; tests pass |
 | | 9. NPEI (health, exits) | Built; tests pass |
 | | 10. Paper trading (`run_trader`, watchdog, paper broker) | Built on Binance-style venue stops; Quidax needs software stops (next) |
@@ -21,7 +21,7 @@ Last updated: 2026-11-11 (daily-bar research)
 | | 14. Controlled live trading | Not started (live Binance broker, `go_live_check`, `run_live`) |
 | Capacity | 100 trades/day per market | Not yet load-tested |
 
-Tests: 382 passing, 94% line coverage. Phases 4-13 were first built in an earlier
+Tests: 384 passing, 94% line coverage. Phases 4-13 were first built in an earlier
 session whose log entries were lost; see the DEVLOG recovery note.
 
 ## Open items for the operator

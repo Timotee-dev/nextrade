@@ -2,6 +2,29 @@
 
 Newest first.
 
+## 2026-11-11 · Daily walk-forward with real sizing: breakout is the only candidate
+
+| Daily, risk/trade | Strategy | OOS trades | Mean net R (95% CI) | Random baseline |
+| --- | --- | --- | --- | --- |
+| 0.5% | breakout | 8 | +0.292 (-0.763 to +1.332) | 6 trades, -0.187 |
+| 0.5% | trend | 3 | -0.118 | 18 trades, +0.491 |
+| 1.0% | breakout | 10 | +0.602 (-0.263 to +1.464) | 12 trades, -0.136 |
+| 1.0% | trend | 36 | +0.109 (-0.340 to +0.560) | 81 trades, +0.126 |
+
+**Reading**
+- Trend does not beat random entries with the same exits: its profit is crypto's long-run
+  drift, not its entry rule. Dropped as a candidate.
+- Breakout beats random entries clearly but on 10 trades; the interval includes losses.
+- Only 3 breakout folds: rolling 730-day windows rarely held the 30 signals a fold needs.
+
+**Built**: `--expanding` (each test window trains on all earlier data, still strictly out of
+sample) and `quidax_markets` (Quidax markets by NGN volume and spread).
+
+**Next, decided before looking**: breakout is now a hypothesis chosen after seeing data.
+The confirmation test runs it UNCHANGED on coins it has not seen (Quidax-listed, on Gate.io).
+
+**Tests**: 384 passing.
+
 ## 2026-11-11 · Daily bars: first positive signal, blocked by position sizing
 
 **Run** (Gate.io prices, Quidax costs, NGN 20,000):

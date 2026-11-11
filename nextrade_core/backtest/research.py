@@ -42,6 +42,8 @@ class ResearchConfig:
     initial_cash: Decimal = Decimal(1000)
     min_trades: int = 100
     scoring: ScoringConfig = field(default_factory=ScoringConfig)
+    expanding: bool = False        # train on ALL earlier data (for rare signals, e.g. daily bars)
+    min_train_signals: int = 30
 
 
 @dataclass
@@ -80,7 +82,8 @@ def evaluate_strategy(strategy: Strategy, frames: dict[str, pd.DataFrame], instr
     folds, oos_trades, base_trades, raw_trades = [], [], [], []
     rejections_total: dict[str, int] = {}
     if len(ds):
-        for fold in walk_forward(ds["t"], ds["t_end"], cfg.train, cfg.test, embargo=cfg.embargo):
+        for fold in walk_forward(ds["t"], ds["t_end"], cfg.train, cfg.test, embargo=cfg.embargo,
+                                 expanding=cfg.expanding, min_train=cfg.min_train_signals):
             train_ds = ds.iloc[fold.train_idx]
             model = train_calibrated(train_ds, train_ds["y"].to_numpy(), cfg.model_kind, features, seed=fold.number)
             naia = Naia(costs, cfg.scoring)
