@@ -1,0 +1,14 @@
+.env
+*.sqlite3
+__pycache__/
+*.pyc
+.pytest_cache/
+.coverage
+htmlcov/
+.venv/
+venv/
+reports/*
+!reports/.gitkeep
+data/
+research/outputs/
+.vscode/

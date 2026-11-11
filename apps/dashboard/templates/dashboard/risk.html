@@ -1,0 +1,8 @@
+{% extends "dashboard/base.html" %}{% load nt %}{% block body %}
+{% if summary %}<div class="grid"><div class="card"><div class="k">Open risk (to stops, with gap allowance)</div><div class="v">{{ open_risk|num:4 }}</div></div>
+<div class="card"><div class="k">Current drawdown</div><div class="v">{{ summary.current_drawdown|pct }}</div></div>
+<div class="card"><div class="k">Max drawdown</div><div class="v">{{ summary.max_drawdown|pct }}</div></div>
+<div class="card"><div class="k">System state</div><div class="v">{{ status.state }}</div></div></div>{% endif %}
+<h2>Risk limits in force</h2><table><tr><th>Limit</th><th class="n">Value</th></tr>{% for k, v in limits.items %}<tr><td>{{ k }}</td><td class="n">{{ v }}</td></tr>{% endfor %}</table>
+<h2>State history</h2><div class="scroll"><table><tr><th>Time (UTC)</th><th>From</th><th>To</th><th>By</th><th>Reason</th></tr>{% for t in transitions %}<tr><td>{{ t.at|date:"Y-m-d H:i:s" }}</td><td>{{ t.from_state }}</td><td class="{% if t.to_state == 'emergency' or t.to_state == 'risk_shutdown' %}bad{% endif %}">{{ t.to_state }}</td><td>{{ t.actor }}</td><td>{{ t.reason }}</td></tr>{% endfor %}</table></div>
+{% endblock %}

@@ -1,0 +1,3 @@
+# Only on the Windows machine that runs the MetaTrader 5 terminal (services/mt5_bridge).
+# Windows-only package; pin the version you install once the bridge is tested.
+MetaTrader5

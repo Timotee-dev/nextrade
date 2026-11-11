@@ -1,0 +1,5 @@
+{% extends "dashboard/base.html" %}{% block body %}
+<div class="grid"><div class="card"><div class="k">Forex market now</div><div class="v {% if forex_open %}good{% else %}bad{% endif %}">{{ forex_open|yesno:"open,closed" }}</div></div>
+<div class="card"><div class="k">Active sessions</div><div class="v">{{ sessions|join:", "|default:"none" }}</div></div></div>
+<p class="muted">Forex trading is not enabled yet. It starts on an MT5 demo account after crypto passes paper trading (see docs/SETUP_GUIDE.md, forex section). Pairs, spreads, economic events and forex performance will appear here then.</p>
+{% endblock %}

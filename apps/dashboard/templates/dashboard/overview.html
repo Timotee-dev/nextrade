@@ -1,0 +1,21 @@
+{% extends "dashboard/base.html" %}{% load nt %}{% block body %}{% if summary %}
+<div class="grid">
+<div class="card"><div class="k">Total capital</div><div class="v">{{ summary.total_capital|num }} {{ summary.currency }}</div></div>
+<div class="card"><div class="k">Available</div><div class="v">{{ summary.available_capital|num }}</div></div>
+<div class="card"><div class="k">Invested</div><div class="v">{{ summary.invested_capital|num }}</div></div>
+<div class="card"><div class="k">Realised P&amp;L</div><div class="v {% if summary.realized_pnl < 0 %}bad{% else %}good{% endif %}">{{ summary.realized_pnl|signed }}</div></div>
+<div class="card"><div class="k">Unrealised P&amp;L</div><div class="v">{{ summary.unrealized_pnl|signed }}</div></div>
+<div class="card"><div class="k">Net return</div><div class="v">{{ summary.net_return|pct }}</div></div>
+<div class="card"><div class="k">Active positions</div><div class="v">{{ summary.active_positions }}</div></div>
+<div class="card"><div class="k">Closed trades</div><div class="v">{{ summary.total_trades }}</div></div>
+<div class="card"><div class="k">Win rate</div><div class="v">{{ summary.win_rate|pct:1 }}</div></div>
+<div class="card"><div class="k">Profit factor</div><div class="v">{{ summary.profit_factor|num }}</div></div>
+<div class="card"><div class="k">Mean R per trade</div><div class="v">{{ summary.expectancy_r|signed:3 }}</div></div>
+<div class="card"><div class="k">Max drawdown</div><div class="v">{{ summary.max_drawdown|pct }}</div></div>
+</div>
+<p class="muted">Closed trades: {{ summary.total_trades }}. With fewer than about 400, these figures are not statistically meaningful.</p>
+<h2>Balances (from the ledger)</h2><table><tr><th>Asset</th><th class="n">Amount</th></tr>{% for a, v in balances.items %}<tr><td>{{ a }}</td><td class="n">{{ v|num:8 }}</td></tr>{% endfor %}</table>
+{% endif %}
+<h2>Processes</h2><table><tr><th>Process</th><th class="n">Last heartbeat (s ago)</th></tr>{% for p, age in status.heartbeat_age_s.items %}<tr><td>{{ p }}</td><td class="n {% if age > 60 %}bad{% endif %}">{{ age|num:0 }}</td></tr>{% empty %}<tr><td colspan="2" class="muted">No process has reported yet.</td></tr>{% endfor %}</table>
+<h2>Recent alerts</h2><table><tr><th>Time (UTC)</th><th>Level</th><th>Kind</th><th>Message</th></tr>{% for a in alerts %}<tr><td>{{ a.created_at|date:"Y-m-d H:i" }}</td><td class="{% if a.level == 'critical' %}bad{% elif a.level == 'warning' %}warn{% endif %}">{{ a.level }}</td><td>{{ a.kind }}</td><td>{{ a.message }}</td></tr>{% empty %}<tr><td colspan="4" class="muted">None.</td></tr>{% endfor %}</table>
+{% endblock %}

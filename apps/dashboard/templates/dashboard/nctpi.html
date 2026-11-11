@@ -1,0 +1,5 @@
+{% extends "dashboard/base.html" %}{% load nt %}{% block body %}{% if funnel %}
+<h2>Opportunity funnel</h2><table><tr><th>Stage</th><th class="n">Count</th></tr>{% for k, v in funnel.items %}<tr><td>{{ k|cut:"_"|title }}</td><td class="n">{{ v }}</td></tr>{% endfor %}</table>
+<div class="grid"><div class="card"><div class="k">Active positions</div><div class="v">{{ summary.active_positions }}</div></div><div class="card"><div class="k">Invested capital</div><div class="v">{{ summary.invested_capital|num }}</div></div></div>
+<p class="muted">Order attempts, filled entries and completed round trips are counted separately. Discovering far more opportunities than are executed is expected.</p>{% endif %}
+{% endblock %}

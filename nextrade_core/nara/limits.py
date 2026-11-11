@@ -1,0 +1,31 @@
+"""Risk limits (spec 9). Starting values for TESTING, not values known to be safe.
+
+Limits are versioned. Only the operator can change them, through the admin with an
+audit row (Phase 10 wires that). NAIA, models and Telegram have no write path.
+"""
+
+from __future__ import annotations
+
+from dataclasses import asdict, dataclass
+from decimal import Decimal
+
+
+@dataclass(frozen=True)
+class RiskLimits:
+    version: str = "limits-1"
+    risk_per_trade: Decimal = Decimal("0.0025")     # 0.25% of equity
+    max_open_risk: Decimal = Decimal("0.02")        # 2%
+    max_cluster_risk: Decimal = Decimal("0.015")    # 1.5% in one correlated cluster
+    daily_loss: Decimal = Decimal("0.02")           # pause entries until 00:00 UTC
+    weekly_loss: Decimal = Decimal("0.05")          # risk shutdown
+    max_drawdown: Decimal = Decimal("0.10")         # risk shutdown
+    max_consecutive_losses: int = 6                 # pause entries
+    consecutive_loss_pause_hours: int = 4
+    max_stress_loss: Decimal = Decimal("0.04")
+    max_positions: int = 10                          # operator cap
+    max_spread_bps: Decimal = Decimal("15")
+    max_capital_at_risk: Decimal | None = None       # absolute cap for live micro stage (account ccy)
+    gap_allowance: Decimal = Decimal("0.25")         # extra fraction of stop distance for open risk
+
+    def as_dict(self) -> dict:
+        return {k: str(v) if isinstance(v, Decimal) else v for k, v in asdict(self).items()}

@@ -1,0 +1,2 @@
+# Installed from Phase 2 onward, when market data moves to PostgreSQL.
+psycopg[binary]==3.3.8

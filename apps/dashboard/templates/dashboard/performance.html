@@ -1,0 +1,20 @@
+{% extends "dashboard/base.html" %}{% load nt %}{% block body %}{% if run %}
+<h2>Equity and drawdown</h2><div id="equity" style="height:300px" class="card"></div><div id="dd" style="height:140px;margin-top:8px" class="card"></div>
+<script src="https://unpkg.com/lightweight-charts@4.2.0/dist/lightweight-charts.standalone.production.js"></script>
+<script>
+fetch("{% url 'dashboard:api-equity' %}?mode={{ mode }}&run={{ run.pk }}").then(r=>r.json()).then(rows=>{
+ if(!rows.length||!window.LightweightCharts){return}
+ const dark=matchMedia('(prefers-color-scheme: dark)').matches, col=dark?'#9aa3b2':'#5c6575';
+ const opts={layout:{background:{color:'transparent'},textColor:col},grid:{vertLines:{visible:false},horzLines:{color:dark?'#262b36':'#e3e6ec'}},timeScale:{timeVisible:true}};
+ const c1=LightweightCharts.createChart(document.getElementById('equity'),opts);
+ c1.addLineSeries({color:'#4c8dff',lineWidth:2}).setData(rows.map(r=>({time:r.time,value:r.equity})));
+ const c2=LightweightCharts.createChart(document.getElementById('dd'),opts);
+ c2.addAreaSeries({lineColor:'#e5534b',topColor:'rgba(229,83,75,.3)',bottomColor:'rgba(229,83,75,0)'}).setData(rows.map(r=>({time:r.time,value:-100*r.drawdown})));
+});
+</script>
+<h2>By strategy</h2><table><tr><th>Strategy</th><th class="n">Trades</th><th class="n">Win rate</th><th class="n">P&amp;L</th><th class="n">Mean R</th></tr>{% for s in strategies %}<tr><td>{{ s.strategy }}</td><td class="n">{{ s.trades }}</td><td class="n">{{ s.win_rate|pct:1 }}</td><td class="n">{{ s.pnl|signed:4 }}</td><td class="n">{{ s.mean_r|signed:3 }}</td></tr>{% empty %}<tr><td colspan="5" class="muted">No trades yet.</td></tr>{% endfor %}</table>
+<div class="grid"><div class="card"><div class="k">Trading costs (fees)</div><div class="v">{{ summary.fees|num:4 }}</div></div></div>
+<h2>Monthly returns</h2><table><tr><th>Month</th><th class="n">Equity</th><th class="n">Return</th></tr>{% for r in monthly %}<tr><td>{{ r.period }}</td><td class="n">{{ r.equity|num }}</td><td class="n">{{ r.return|pct }}</td></tr>{% endfor %}</table>
+<h2>Weekly returns (last 12)</h2><table><tr><th>Week</th><th class="n">Equity</th><th class="n">Return</th></tr>{% for r in weekly %}<tr><td>{{ r.period }}</td><td class="n">{{ r.equity|num }}</td><td class="n">{{ r.return|pct }}</td></tr>{% endfor %}</table>
+<h2>Daily returns (last 30)</h2><table><tr><th>Day</th><th class="n">Equity</th><th class="n">Return</th></tr>{% for r in daily %}<tr><td>{{ r.period }}</td><td class="n">{{ r.equity|num }}</td><td class="n">{{ r.return|pct }}</td></tr>{% endfor %}</table>
+{% endif %}{% endblock %}

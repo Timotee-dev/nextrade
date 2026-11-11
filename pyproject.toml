@@ -1,0 +1,14 @@
+[project]
+name = "nextrade"
+version = "0.1.0"
+description = "NEXTRADE AI - research-driven crypto and forex trading platform"
+requires-python = ">=3.12"
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "config.settings"
+testpaths = ["tests"]
+addopts = "-ra"
+
+[tool.ruff]
+line-length = 110
+target-version = "py312"
