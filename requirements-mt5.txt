@@ -1,3 +1,3 @@
-# Only on the Windows machine that runs the MetaTrader 5 terminal (services/mt5_bridge).
-# Windows-only package; pin the version you install once the bridge is tested.
+# Windows only, on the PC that runs the MetaTrader 5 terminal.
+# Used by: python manage.py load_mt5_history   (and, later, forex paper trading)
 MetaTrader5

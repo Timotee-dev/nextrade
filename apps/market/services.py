@@ -16,7 +16,7 @@ def save_instrument(inst, oco_allowed: bool = False) -> bool:
             "base": inst.base, "quote": inst.quote, "asset_class": inst.asset_class.value,
             "tick_size": inst.tick_size, "step_size": inst.step_size, "min_qty": inst.min_qty,
             "min_notional": inst.min_notional, "max_qty": inst.max_qty, "tradable": inst.tradable,
-            "oco_allowed": oco_allowed, "order_types": sorted(inst.order_types),
+            "contract_size": inst.contract_size, "oco_allowed": oco_allowed, "order_types": sorted(inst.order_types),
         },
     )
     return created

@@ -2,6 +2,20 @@
 
 Newest first.
 
+## 2026-11-12 · Forex batch F1: direct MT5 history download
+
+Decision (operator): forex through MetaTrader 5. Gaps found before any forex test: the system
+is long-only, has no leverage/margin, no conversion of JPY/CHF/CAD profits to the account
+currency, and no swap costs. Plan: F1 data, F2 shorts + leverage + conversion, F3 pre-registered
+forex strategies and tests, F4 paper trading on an MT5 demo.
+
+**Built (F1)**: `adapters/mt5/local.py` (official MetaTrader5 package, no bridge server; symbol
+suffixes such as Exness cent "c"; broker server time corrected to UTC, detected from the latest
+tick while the market is open; spread per bar) and `load_mt5_history` (resumable; 15m/1h/4h/1d;
+H1 spreads of the last 30 days kept as quote samples; warns on a REAL account).
+**Fixed**: `save_instrument` did not store contract size (1 for crypto, 100,000 or 1,000 for forex).
+**Tests**: 403 passing (fake MT5 terminal in tests/mt5_fake.py).
+
 ## 2026-11-12 · First paper run started; quieter output
 
 **Run 1** started 2026-11-11 20:09 UTC: NGN 20,000 = 14.30 USDT at NGN 1,398.22/USDT; all 9
