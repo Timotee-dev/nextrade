@@ -21,7 +21,7 @@ Last updated: 2026-11-11 (T1 passed; Quidax paper trading)
 | | 14. Controlled live trading | Not started (live Binance broker, `go_live_check`, `run_live`) |
 | Capacity | 100 trades/day per market | Not yet load-tested |
 
-Tests: 397 passing, 94% line coverage. Phases 4-13 were first built in an earlier
+Tests: 398 passing, 94% line coverage. Phases 4-13 were first built in an earlier
 session whose log entries were lost; see the DEVLOG recovery note.
 
 ## Open items for the operator

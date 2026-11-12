@@ -12,6 +12,7 @@ Only strategies judged on their raw record (ADR 0006) run here; T1 is the one th
 from __future__ import annotations
 
 import asyncio
+import logging
 from dataclasses import replace
 from decimal import Decimal
 
@@ -128,14 +129,15 @@ class Command(BaseCommand):
                           f"risk {limits.risk_per_trade:.2%}/trade; min order {min_usdt} USDT; "
                           f"spreads {qx_spreads or 'default 40 bps'}")
         try:
-            asyncio.run(self._main(daemon, controller, poller, refresher, o))
+            asyncio.run(self._main(daemon, controller, poller, refresher, o,
+                                   OffLoop(_Status(run.pk, usdtngn), "status")))
         finally:
             for x in (store, source, controls, poller, refresher):
                 x.close()
             qx_client.close()
             gate_client.close()
 
-    async def _main(self, daemon, controller, poller, refresher, o) -> None:
+    async def _main(self, daemon, controller, poller, refresher, o, status) -> None:
         controller.transition(TradingState.DATA_INIT, Actor.OPERATOR, "run_paper_quidax started")
         controller.transition(TradingState.ANALYSIS, Actor.SYSTEM, "market data available")
         for sym in daemon.cfg.symbols:
@@ -146,6 +148,9 @@ class Command(BaseCommand):
         self.stdout.write(f"Reconciliation: {report}")
         controller.transition(TradingState.PAPER, Actor.OPERATOR, "paper trading started")
         self.stdout.write("Paper trading on Quidax prices (fake money). Ctrl+C to stop; rerun to resume.")
+        # One line per price check buried everything else; keep HTTP noise to warnings only.
+        for name in ("httpx", "httpcore"):
+            logging.getLogger(name).setLevel(logging.WARNING)
         steps, last_refresh_hour = 0, None
         try:
             while True:
@@ -153,10 +158,14 @@ class Command(BaseCommand):
                 poller.poll(now)
                 if now.replace(minute=0, second=0, microsecond=0) != last_refresh_hour:
                     refresher.refresh(now)
-                    last_refresh_hour = now.replace(minute=0, second=0, microsecond=0)
+                    last_refresh_hour, new_hour = now.replace(minute=0, second=0, microsecond=0), True
+                else:
+                    new_hour = False
                 result = await daemon.step()
                 if result:
                     self.stdout.write(f"[{now:%Y-%m-%d %H:%M} UTC] new daily bar {daemon.last_bar:%Y-%m-%d}: {result}")
+                if new_hour:
+                    self.stdout.write(f"[{now:%Y-%m-%d %H:%M} UTC] {status.line()}")
                 steps += 1
                 if o["max_steps"] and steps >= o["max_steps"]:
                     break
@@ -171,3 +180,21 @@ class Command(BaseCommand):
 def _usdt_quote(usdtngn: Instrument):
     from apps.market.models import QuoteSample
     return QuoteSample.objects.filter(instrument=usdtngn).order_by("-ts").values_list("bid", "ask").first()
+
+
+class _Status:
+    """The hourly status line: proof the trader is alive, and what it holds."""
+
+    def __init__(self, run_id: int, usdtngn: Instrument) -> None:
+        self.run_id, self.usdtngn = run_id, usdtngn
+
+    def line(self) -> str:
+        from apps.trading.models import Position
+        q = _usdt_quote(self.usdtngn)
+        rate = f"NGN {(q[0] + q[1]) / 2:,.2f}/USDT" if q else "no USDT/NGN quote"
+        positions = Position.objects.filter(run_id=self.run_id)
+        open_syms = sorted(positions.filter(status="open").values_list("symbol", flat=True))
+        closed = positions.filter(status="closed")
+        pnl = sum((p.realized_pnl or Decimal(0) for p in closed), Decimal(0))
+        return (f"alive · {rate} · open: {', '.join(open_syms) or 'none'} · "
+                f"closed trades: {closed.count()} (net {pnl:+.2f} USDT)")

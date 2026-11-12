@@ -101,3 +101,13 @@ def test_refuses_strategies_that_need_naia_models(venues):
 def test_missing_gate_history_is_explained(venues):
     with pytest.raises(CommandError, match="load_gate_history"):
         call_command("run_paper_quidax", symbols="ETHUSDT", max_steps=1)
+
+
+def test_hourly_status_line_and_quiet_http_log(venues, capsys):
+    import logging
+    seed_daily("ETHUSDT", cross=True)
+    seed_daily("BTCUSDT", cross=False)
+    call_command("run_paper_quidax", new_run=True, symbols="ETHUSDT,BTCUSDT", poll=0, max_steps=1)
+    out = capsys.readouterr().out
+    assert "alive · NGN 1,400.00/USDT · open: ETHUSDT · closed trades: 0 (net +0.00 USDT)" in out
+    assert logging.getLogger("httpx").level == logging.WARNING

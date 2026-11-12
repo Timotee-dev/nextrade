@@ -2,6 +2,14 @@
 
 Newest first.
 
+## 2026-11-12 · First paper run started; quieter output
+
+**Run 1** started 2026-11-11 20:09 UTC: NGN 20,000 = 14.30 USDT at NGN 1,398.22/USDT; all 9
+Quidax order books answered. Bar 2026-11-10: 0 signals (no coin crossed above its 200-day average).
+
+**Changed**: HTTP request lines (8 a minute) hidden; one status line per hour instead
+(rate, open positions, closed trades, net result). **Tests**: 398 passing.
+
 ## 2026-11-11 · T1 passed; Quidax paper trading built
 
 **T1 `trendfilter`** (pre-registered, daily, Gate.io prices with Quidax costs): 63 out-of-sample
