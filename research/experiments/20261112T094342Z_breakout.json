@@ -1,0 +1,131 @@
+{
+  "written_at": "20261112T094342Z",
+  "git_commit": "c27201c",
+  "strategy": "breakout-v1-0c6f5dcb",
+  "model": "hitrate",
+  "timeframe": "1h",
+  "symbols": [
+    "BTCUSDT",
+    "ETHUSDT",
+    "SOLUSDT"
+  ],
+  "period": [
+    "2013-03-31 00:00:00+00:00",
+    "2026-11-12 09:42:37.516380+00:00"
+  ],
+  "feature_set": "fs-1-7fd6cd9102",
+  "dataset_hash": "68a57171d4cd444a",
+  "config": {
+    "train": "365 days 00:00:00",
+    "test": "90 days 00:00:00",
+    "embargo": "1 days 00:00:00",
+    "model_kind": "hitrate",
+    "initial_cash": "1000",
+    "min_trades": "100",
+    "scoring": "{'hurdle_r': 0.1, 'uncertainty_k': 1.0, 'max_uncertainty': 0.15, 'max_spread_bps': 15.0, 'min_quote_volume_24h': 1000000.0, 'allowed_regimes': {}}",
+    "expanding": "True",
+    "leverage": "200",
+    "holdout_from": "None",
+    "min_train_signals": "30"
+  },
+  "summary": {
+    "trades": 0
+  },
+  "baseline": {
+    "trades": 14,
+    "initial_cash": 1000.0,
+    "gross_profit": 6.309775282201199,
+    "gross_loss": 99.05934452560365,
+    "net_profit": -92.74956924340243,
+    "fees": 47.183057827499994,
+    "win_rate": 0.14285714285714285,
+    "avg_win": 3.1548876411005997,
+    "avg_loss": -8.254945377133637,
+    "expectancy": -6.624969231671602,
+    "expectancy_r": -1.4273604135901394,
+    "expectancy_r_ci95": [
+      -1.8130093163629972,
+      -0.9265707122291063
+    ],
+    "profit_factor": 0.06369692140018478,
+    "avg_bars_held": 5.785714285714286,
+    "exit_reasons": {
+      "stop": 12,
+      "target": 1,
+      "time": 1
+    },
+    "risk_of_ruin_50pct_dd": null,
+    "cost_share_of_gross": 7.477771508059147
+  },
+  "gate": {
+    "pass": false,
+    "reasons": [
+      "only 0 out-of-sample trades; need at least 100",
+      "95% interval of mean net R does not lie above zero",
+      "does not beat the random-entry baseline"
+    ],
+    "trades": 0,
+    "mean_r": null,
+    "mean_r_ci95": null,
+    "baseline_mean_r": -1.4273604135901394,
+    "halves_mean_r": null
+  },
+  "folds": [
+    {
+      "fold": 0,
+      "test_start": "2026-09-26 18:00:00+00:00",
+      "test_end": "2026-12-25 18:00:00+00:00",
+      "train_signals": 349,
+      "train_hit_rate": 0.3266,
+      "model": "hitrate",
+      "model_notes": [],
+      "trades": 0,
+      "net_return": 0.0,
+      "max_drawdown": 0.0,
+      "funnel": {
+        "signals": 40,
+        "rejected_by_naia": 40
+      },
+      "rejections": {
+        "naia:low_expected_value": 40
+      },
+      "halts": []
+    }
+  ],
+  "raw": {
+    "trades": 23,
+    "initial_cash": 1000.0,
+    "gross_profit": 29.767259016170744,
+    "gross_loss": 127.76332075682078,
+    "net_profit": -97.99606174065002,
+    "fees": 73.79233871119999,
+    "win_rate": 0.30434782608695654,
+    "avg_win": 4.252465573738678,
+    "avg_loss": -7.9852075473012984,
+    "expectancy": -4.260698336550001,
+    "expectancy_r": -0.9157191050986502,
+    "expectancy_r_ci95": [
+      -1.3954679343159966,
+      -0.3977867379117502
+    ],
+    "profit_factor": 0.23298751816907193,
+    "avg_bars_held": 6.608695652173913,
+    "exit_reasons": {
+      "stop": 16,
+      "target": 7
+    },
+    "risk_of_ruin_50pct_dd": 1.0,
+    "cost_share_of_gross": 2.478976605508525
+  },
+  "diagnostics": {
+    "signals": 389,
+    "signals_per_day": 0.947,
+    "labelled_signals": 388,
+    "label_hit_rate": 0.3170103092783505,
+    "label_mean_r_net": -0.698901664946502,
+    "naia_rejections": {
+      "naia:low_expected_value": 40
+    },
+    "judged_raw": false
+  }
+}

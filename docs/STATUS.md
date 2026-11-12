@@ -20,9 +20,11 @@ Last updated: 2026-11-11 (T1 passed; Quidax paper trading)
 | | 13. Adaptive learning (governance) | Built; tests pass |
 | | 14. Controlled live trading | Not started (live Binance broker, `go_live_check`, `run_live`) |
 | Forex | FX1-FX7 all FAIL (ADR 0007-0009); search closed 2026-11-12 | No forex strategy approved |
+| Crypto fast | trend/meanrev/breakout at Gate.io costs FAIL (ADR 0010) | Ruled out |
+| Microstructure | Quidax book recorder + gap / market-making analysis (ADR 0011) | Recording 2-4 weeks |
 | Capacity | 100 trades/day per market | Not yet load-tested |
 
-Tests: 430 passing, 94% line coverage. Phases 4-13 were first built in an earlier
+Tests: 440 passing, 94% line coverage. Phases 4-13 were first built in an earlier
 session whose log entries were lost; see the DEVLOG recovery note.
 
 ## Open items for the operator
@@ -31,3 +33,5 @@ session whose log entries were lost; see the DEVLOG recovery note.
 - Weekly: dashboard at http://127.0.0.1:8004/dashboard/ (`runserver 8004` in a second window).
 - No real money until T1's paper results match its backtest (then Phase 14: NGN 10,000 cap).
 - Forex: no approved strategy. The Exness demo can stay; nothing runs on it.
+- Keep `.venv\\Scripts\\python manage.py record_books` running 2-4 weeks, then run
+  `analyze_quidax_edge --days 14` and share the output.

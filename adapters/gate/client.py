@@ -99,6 +99,14 @@ class GateClient:
     def currency_pair(self, pair: str) -> dict:
         return self._get(f"/spot/currency_pairs/{pair}")
 
+    def ticker(self, pair: str) -> tuple[str, str] | None:
+        """(best bid, best ask) as strings, e.g. ticker("BTC_USDT"); None if a side is empty."""
+        rows = self._get("/spot/tickers", {"currency_pair": pair})
+        if not rows:
+            return None
+        bid, ask = rows[0].get("highest_bid"), rows[0].get("lowest_ask")
+        return (bid, ask) if bid and ask else None
+
     def candles(self, symbol: str, tf: Timeframe, start: datetime, end: datetime) -> list[Candle]:
         """Closed bars with open_time in [start, end), paged 1,000 at a time, oldest first."""
         out: dict[datetime, Candle] = {}

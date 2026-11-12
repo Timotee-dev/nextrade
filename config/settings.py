@@ -72,6 +72,10 @@ DATABASES = {
         env("DATABASE_URL", f"sqlite:///{BASE_DIR / 'db.sqlite3'}"), conn_max_age=60
     )
 }
+if DATABASES["default"]["ENGINE"].endswith("sqlite3"):
+    # Several NEXTRADE processes (paper trader, book recorder) write at once: wait for the lock
+    # (up to 30 s) instead of failing with "database is locked".
+    DATABASES["default"].setdefault("OPTIONS", {})["timeout"] = 30
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 LANGUAGE_CODE = "en-gb"

@@ -2,6 +2,17 @@
 
 Newest first.
 
+## 2026-11-12 · Fast crypto at Gate.io costs fails; Quidax microstructure recorder built
+
+**ADR 0010 result**: 4h at Gate.io costs (0.46% round trip): trend unfiltered 250 trades
+-0.160 R; breakout 326 trades -0.194 R; meanrev 39 signals in 4 years. 1h (14 months): all
+-0.67 to -0.92 R. FAIL. Fast crypto strategies are ruled out at these costs too.
+**Built (ADR 0011)**: `BookSnapshot` model + migration, `GateClient.ticker`, `record_books`
+(Quidax top-5 books + Gate.io world prices every 10 s, quiet log, hourly status),
+`nextrade_core/micro/edge.py` (gap measurement, buy-the-dip gap sweep, market-making simulation
+with trade-through fills and inventory caps), `analyze_quidax_edge`. SQLite now waits up to 30 s
+for a lock (two processes write at once). **Tests**: 440 passing.
+
 ## 2026-11-12 · Gate.io cost model; ADR 0010 (fast crypto strategies at Gate costs)
 
 Added `gate` costs (0.2%/side, 2 bps spread, 2 bps slippage: about 0.46% round trip vs Quidax

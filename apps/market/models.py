@@ -119,3 +119,18 @@ class DataQualityEvent(models.Model):
     class Meta:
         indexes = [models.Index(fields=["kind", "detected_at"], name="dq_kind_detected")]
         ordering = ["-detected_at"]
+
+
+class BookSnapshot(models.Model):
+    """Top order-book levels at one moment (microstructure research: market making and
+    price gaps). Quidax NGN books are stored with venue "quidax"; world prices from Gate.io
+    are stored as one-level books with venue "gate". Prices and sizes kept as strings."""
+
+    venue = models.CharField(max_length=16)
+    symbol = models.CharField(max_length=32)
+    ts = models.DateTimeField()
+    bids = models.JSONField()            # [[price, qty], ...] best first
+    asks = models.JSONField()
+
+    class Meta:
+        indexes = [models.Index(fields=["venue", "symbol", "ts"], name="book_venue_symbol_ts")]
