@@ -2,6 +2,22 @@
 
 Newest first.
 
+## 2026-11-12 · Bug: same-bar forex trades blocked and their risk understated; all FX re-run
+
+**FX4-FX6 first results (ADR 0008 rules, data to 2025-11-12)**: FX4 fx_sweep 316 trades, -0.327 R
+(CI -0.452 to -0.196), baseline -0.435: FAIL. FX5 fx_tsmom 72 trades, -0.263 R: FAIL. FX6
+fx_xsmom 82 trades, -0.018 R (CI -0.253 to +0.243), halves -0.344 / +0.308: FAIL.
+
+**Bug found from FX5's 128 "size_valid" refusals**: when several trades were approved on the
+same bar, the allocator (nctpi/allocation.py) subtracted each one's FULL notional from free cash
+(spot logic) instead of notional / leverage, so after one forex trade the next looked
+unaffordable; and it recorded the approved batch-mates with contract size 1 and no direction,
+understating their risk about 100,000x for the open-risk, cluster and stress limits.
+Spot crypto was unaffected (leverage 1, contract 1, long). Both fixed with a regression test.
+All six forex results above are void where same-bar entries occur (FX3, FX5, FX6 most); all six
+are re-run unchanged. Fixing a bug is not re-tuning: rules and parameters stay as registered.
+**Tests**: 427 passing.
+
 ## 2026-11-12 · FX1-FX3 failed; FX4-FX6 and a hold-out year pre-registered
 
 **Results (operator's run, ADR 0007 rules)**: FX1 fx_trend 276 OOS trades, -0.240 R (CI -0.416

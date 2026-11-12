@@ -53,11 +53,15 @@ def allocate(candidates: list[Candidate], snapshot: PortfolioSnapshot, risk: Ris
             continue
         out.approved.append((c, decision))
         held.add(c.symbol)
-        spent = decision.notional * (1 + c.proposal.cost_fraction)
+        # Spot spends the notional; a margin account (leverage > 1) only locks notional / leverage.
+        spent = decision.notional * (1 + c.proposal.cost_fraction) / c.proposal.leverage
+        inst = instruments[c.symbol]
         snap = replace(snap, free_cash=snap.free_cash - spent,
                        positions=snap.positions + (OpenPosition(c.symbol, decision.qty, c.proposal.entry,
                                                                 c.proposal.stop, c.proposal.entry,
-                                                                c.proposal.asset_class, c.proposal.beta),))
+                                                                c.proposal.asset_class, c.proposal.beta,
+                                                                c.proposal.sign, inst.contract_size,
+                                                                c.proposal.fx),))
     return out
 
 

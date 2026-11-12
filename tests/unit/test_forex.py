@@ -269,3 +269,24 @@ def test_xsmom_buys_two_strongest_and_sells_two_weakest_each_month():
         ranked = sorted(moms, key=moms.get, reverse=True)
         assert {s.symbol for s in group if s.side is Side.LONG} == set(ranked[:2])
         assert {s.symbol for s in group if s.side is Side.SHORT} == set(ranked[-2:])
+
+
+def test_same_bar_forex_batch_uses_margin_and_counts_full_risk():
+    """Regression: the allocator spent the FULL notional per approved forex trade (spot logic), so
+    one trade looked like it used the whole account; and it recorded batch-mates with contract
+    size 1 and no direction, understating their risk ~100,000x for the cluster/open-risk limits."""
+    from nextrade_core.nara.engine import TradeProposal
+    from nextrade_core.nara.portfolio import PortfolioSnapshot
+    from nextrade_core.nctpi.allocation import Candidate, allocate
+    insts = {s: fx_inst(s) for s in ("EURUSD", "GBPUSD", "AUDUSD", "NZDUSD", "EURGBP", "USDCAD")}
+    insts["EURGBP"] = fx_inst("EURUSD")
+    snap = PortfolioSnapshot(D(10000), D(10000), D(10000), D(10000), D(10000), clusters={s: "forex" for s in insts})
+    risk = RiskEngine(RiskLimits(risk_per_trade=D("0.01"), max_open_risk=D("0.08"), max_cluster_risk=D("0.06"),
+                                 max_stress_loss=D("1")))
+    cands = [Candidate(f"k{i}", s, 1.0, TradeProposal(s, D("1.1000"), D("1.0800"), D(0), asset_class="forex",
+                                                      sign=1, leverage=D(200)))
+             for i, s in enumerate(insts)]
+    out = allocate(cands, snap, risk, insts, entries_allowed=True)
+    assert len(out.approved) == 4                                  # 4 x (1% + 25% gap) = 5% <= 6%; a 5th breaks it
+    assert out.reasons["nara:cluster_risk_within_limit"] == 2
+    assert not out.reasons.get("nara:size_valid")
