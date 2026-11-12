@@ -19,10 +19,10 @@ Last updated: 2026-11-11 (T1 passed; Quidax paper trading)
 | | 12. Telegram | Built; tests pass |
 | | 13. Adaptive learning (governance) | Built; tests pass |
 | | 14. Controlled live trading | Not started (live Binance broker, `go_live_check`, `run_live`) |
-| Forex | FX1-FX6 all FAIL (ADR 0007, 0008); FX6 break-even, to test on 2006-2021 | No forex strategy approved |
+| Forex | FX1-FX6 all FAIL (ADR 0007, 0008, incl. 2018-2021 check); FX7 AI filter pre-registered (ADR 0009) | No forex strategy approved yet |
 | Capacity | 100 trades/day per market | Not yet load-tested |
 
-Tests: 428 passing, 94% line coverage. Phases 4-13 were first built in an earlier
+Tests: 430 passing, 94% line coverage. Phases 4-13 were first built in an earlier
 session whose log entries were lost; see the DEVLOG recovery note.
 
 ## Open items for the operator

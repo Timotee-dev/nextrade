@@ -2,6 +2,15 @@
 
 Newest first.
 
+## 2026-11-12 · FX5/FX6 fail on 2018-2021; FX7 AI-filtered London breakout pre-registered
+
+Exness daily history starts 2018-07. Unseen 2018-07 to 2021-11: FX6 fx_xsmom 88 trades -0.042 R
+(baseline +0.108) FAIL; FX5 fx_tsmom 100 trades -0.016 R (baseline -0.086), halves -0.207 /
++0.175, FAIL. Currency momentum shows no edge after costs here.
+**Built**: FX7 `fx_london_ai` (ADR 0009): FX3 rules with a 24 h limit, filtered by a model
+retrained each window, six London inputs; the gate also requires beating the unfiltered rules.
+**Tests**: 430 passing.
+
 ## 2026-11-12 · FX1-FX6 after the fix: all fail; `--backfill` for longer daily history
 
 Re-run with rules unchanged: FX1 -0.260 R (281 trades), FX2 -0.162 R (195), FX3 -0.083 R (876,

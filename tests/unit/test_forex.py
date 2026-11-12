@@ -290,3 +290,34 @@ def test_same_bar_forex_batch_uses_margin_and_counts_full_risk():
     assert len(out.approved) == 4                                  # 4 x (1% + 25% gap) = 5% <= 6%; a 5th breaks it
     assert out.reasons["nara:cluster_risk_within_limit"] == 2
     assert not out.reasons.get("nara:size_valid")
+
+
+# ------------------------------------------------------------------ FX7 (ADR 0009)
+def test_london_ai_adds_known_at_close_features_and_same_entries_as_fx3():
+    from nextrade_core.strategies.forex import LONDON_FEATURES
+    from nextrade_core.strategies.registry import make
+    f = _fx_frame(n=96 * 60, minutes=15, seed=11, vol=0.25)
+    ai, plain = make("fx_london_ai"), make("fx_london")
+    a, b = ai.generate(f, "EURUSD", Timeframe.M15), plain.generate(f, "EURUSD", Timeframe.M15)
+    assert [(s.bar_time, s.side, s.stop) for s in a] == [(s.bar_time, s.side, s.stop) for s in b]
+    assert all(s.max_hold_bars == 96 for s in a) and not ai.judged_raw
+    for s in a:
+        assert set(LONDON_FEATURES) <= set(s.features)
+        assert s.features["ldn_break_atr"] > 0 and 7 <= s.features["ldn_hour"] < 10
+
+
+def test_ai_filter_must_beat_the_unfiltered_rules():
+    from nextrade_core.backtest.research import ResearchConfig, evaluate_strategy
+    from nextrade_core.costs.model import cost_model_for
+    from nextrade_core.nara.limits import scaled_limits
+    from nextrade_core.strategies.registry import make
+    pairs = ("EURUSD", "GBPUSD", "AUDUSD", "NZDUSD")
+    frames = {p: _fx_frame(n=96 * 240, minutes=15, seed=11 + k, vol=0.1) for k, p in enumerate(pairs)}
+    insts = {p: fx_inst(p) for p in pairs}
+    cfg = ResearchConfig(train=pd.Timedelta(days=60), test=pd.Timedelta(days=30), model_kind="lgbm",
+                         initial_cash=D(10000), min_trades=1, leverage=D(200), min_train_signals=10,
+                         expanding=True)
+    res = evaluate_strategy(make("fx_london_ai"), frames, insts, cost_model_for("mt5"),
+                            RiskEngine(scaled_limits(D("0.01"), "mt5")), cfg)
+    assert "unfiltered_mean_r" in res.gate and res.folds
+    assert res.folds[-1]["model"] == "lgbm"                 # enough history by the last window

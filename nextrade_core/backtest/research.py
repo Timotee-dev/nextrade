@@ -138,6 +138,14 @@ def evaluate_strategy(strategy: Strategy, frames: dict[str, pd.DataFrame], instr
     gate = decision_gate(trades, btrades, cfg.min_trades,
                          stable_halves=getattr(strategy, "require_stable_halves", False))
     rtrades = pd.concat(raw_trades, ignore_index=True) if raw_trades else pd.DataFrame()
+    if getattr(strategy, "require_beats_unfiltered", False):
+        # an AI filter must earn its place: better than the same rules without it (ADR 0009)
+        f_mean = float(trades["r_net"].mean()) if len(trades) else None
+        u_mean = float(rtrades["r_net"].mean()) if len(rtrades) else None
+        gate["unfiltered_mean_r"] = u_mean
+        if f_mean is None or u_mean is None or f_mean <= u_mean:
+            gate["reasons"].append("the AI filter does not beat the same rules without it")
+            gate["pass"] = False
     labelled = ds if len(ds) else None
     diagnostics = {
         "signals": len(signals), "signals_per_day": _per_day(signals),

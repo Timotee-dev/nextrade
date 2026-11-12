@@ -253,3 +253,49 @@ class FxXsmom(_ForexStrategy):
         long_ok = first & enough & (f["xs_rank"] <= p.n_each_side)
         short_ok = first & enough & (f["xs_rank"] > f["xs_count"] - p.n_each_side)
         return _two_sided(f, long_ok, short_ok, p.stop_atr * f["atr"], p.target_r, p.max_hold)
+
+
+# ================================================================== FX7 (ADR 0009)
+@dataclass(frozen=True)
+class FxLondonAIParams(FxLondonParams):
+    max_hold: int = 96           # 15m bars = 24 hours, so most trades end at the stop or target
+
+
+LONDON_FEATURES = ("ldn_range_pct", "ldn_range_atr", "ldn_break_atr", "ldn_dow", "ldn_hour", "ldn_short")
+
+
+class FxLondonAI(FxLondon):
+    """FX7, 15m: the London breakout rules, filtered by NAIA's model (gradient-boosted trees,
+    retrained every walk-forward window on earlier data only). The model estimates the chance
+    of reaching the 1.5 R target before the stop; NAIA takes the trade only if the expected net
+    R after costs clears its hurdle. Adds London-specific inputs, all known at the signal close."""
+
+    code = "fx_london_ai"
+    version_tag = "1"
+    judged_raw = False
+    require_beats_unfiltered = True
+
+    @classmethod
+    def default_params(cls) -> FxLondonAIParams:
+        return FxLondonAIParams()
+
+    def generate(self, f: pd.DataFrame, symbol: str, timeframe):
+        sigs = super().generate(f, symbol, timeframe)
+        if not sigs:
+            return sigs
+        p: FxLondonAIParams = self.params  # type: ignore[assignment]
+        day = f.index.normalize()
+        in_range = (f.index.hour >= p.range_start_hour) & (f.index.hour < p.range_end_hour)
+        hi = f["high"].where(in_range).groupby(day).transform("max")
+        lo = f["low"].where(in_range).groupby(day).transform("min")
+        out = []
+        from dataclasses import replace
+        for s in sigs:
+            t = pd.Timestamp(s.bar_time)
+            h, l_, c, atr = float(hi[t]), float(lo[t]), float(f.at[t, "close"]), float(f.at[t, "atr"])
+            beyond = (c - h) if s.side.value == "long" else (l_ - c)
+            extra = {"ldn_range_pct": 100 * (h - l_) / c, "ldn_range_atr": (h - l_) / atr if atr else np.nan,
+                     "ldn_break_atr": beyond / atr if atr else np.nan, "ldn_dow": float(t.dayofweek),
+                     "ldn_hour": t.hour + t.minute / 60, "ldn_short": float(s.side.value == "short")}
+            out.append(replace(s, features={**s.features, **extra}))
+        return out
