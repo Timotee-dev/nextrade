@@ -44,6 +44,7 @@ class ResearchConfig:
     scoring: ScoringConfig = field(default_factory=ScoringConfig)
     expanding: bool = False        # train on ALL earlier data (for rare signals, e.g. daily bars)
     leverage: Decimal = Decimal(1)  # margin accounts (forex); ignored for spot crypto
+    holdout_from: pd.Timestamp | None = None  # count only trades decided on/after this (final confirmation)
     min_train_signals: int = 30
 
 
@@ -58,6 +59,11 @@ class ResearchResult:
     dataset_hash: str
     raw_summary: dict = field(default_factory=dict)     # the strategy's own trades, NAIA filter off
     diagnostics: dict = field(default_factory=dict)     # signal counts, rejection reasons, hit rates
+
+
+def _from(fold, cfg) -> pd.Timestamp:
+    start = fold.test_start
+    return max(start, cfg.holdout_from) if cfg.holdout_from is not None else start
 
 
 def _signals_in(signals: list[Signal], start, end) -> list[Signal]:
@@ -94,6 +100,8 @@ def evaluate_strategy(strategy: Strategy, frames: dict[str, pd.DataFrame], instr
     if len(ds):
         for fold in walk_forward(ds["t"], ds["t_end"], cfg.train, cfg.test, embargo=cfg.embargo,
                                  expanding=cfg.expanding, min_train=cfg.min_train_signals):
+            if cfg.holdout_from is not None and fold.test_end <= cfg.holdout_from:
+                continue
             train_ds = ds.iloc[fold.train_idx]
             model = train_calibrated(train_ds, train_ds["y"].to_numpy(), cfg.model_kind, features, seed=fold.number)
             naia = Naia(costs, cfg.scoring)
@@ -103,15 +111,15 @@ def evaluate_strategy(strategy: Strategy, frames: dict[str, pd.DataFrame], instr
                            for sym, f in frames.items()}
             bt = Backtester(test_frames, instruments, costs, risk, cfg.initial_cash, leverage=cfg.leverage,
                             scorer=None if judged_raw else scorer, exit_policy=exit_policy)
-            res = bt.run(_signals_in(signals, fold.test_start, fold.test_end))
+            res = bt.run(_signals_in(signals, _from(fold, cfg), fold.test_end))
             raw_res = Backtester(test_frames, instruments, costs, risk, cfg.initial_cash, leverage=cfg.leverage, exit_policy=exit_policy).run(
-                _signals_in(signals, fold.test_start, fold.test_end))
+                _signals_in(signals, _from(fold, cfg), fold.test_end))
             if len(raw_res.trades):
                 raw_trades.append(raw_res.trades.assign(fold=fold.number))
             for k, v in res.rejections.items():
                 rejections_total[k] = rejections_total.get(k, 0) + v
             base_bt = Backtester(test_frames, instruments, costs, risk, cfg.initial_cash, leverage=cfg.leverage, exit_policy=exit_policy)
-            base_res = base_bt.run(_signals_in(base_signals, fold.test_start, fold.test_end))
+            base_res = base_bt.run(_signals_in(base_signals, _from(fold, cfg), fold.test_end))
             if len(res.trades):
                 oos_trades.append(res.trades.assign(fold=fold.number))
             if len(base_res.trades):

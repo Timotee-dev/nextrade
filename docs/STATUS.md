@@ -19,10 +19,10 @@ Last updated: 2026-11-11 (T1 passed; Quidax paper trading)
 | | 12. Telegram | Built; tests pass |
 | | 13. Adaptive learning (governance) | Built; tests pass |
 | | 14. Controlled live trading | Not started (live Binance broker, `go_live_check`, `run_live`) |
-| Forex | F1 data, F2 shorts/margin/conversion, F3 FX1-FX3 pre-registered (ADR 0007) | Built; tests to run; F4 paper next |
+| Forex | FX1-FX3 failed (ADR 0007); FX4-FX6 + hold-out year pre-registered (ADR 0008) | Tests to run |
 | Capacity | 100 trades/day per market | Not yet load-tested |
 
-Tests: 422 passing, 94% line coverage. Phases 4-13 were first built in an earlier
+Tests: 426 passing, 94% line coverage. Phases 4-13 were first built in an earlier
 session whose log entries were lost; see the DEVLOG recovery note.
 
 ## Open items for the operator

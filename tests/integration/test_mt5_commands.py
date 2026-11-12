@@ -87,3 +87,19 @@ def test_run_backtest_forex_strategy_two_sided(fake, capsys):
                  train_days=20, test_days=10, min_trades=1, risk_per_trade="0.01")
     out = capsys.readouterr().out
     assert out.count("decision gate:") == 2 and "judged on raw trades" in out
+
+
+def test_holdout_counts_only_trades_after_the_date(fake, capsys):
+    import json
+    from pathlib import Path
+
+    from django.conf import settings
+    call_command("load_mt5_history", symbols="EURUSD,USDJPY", timeframes="1h", years=0.25, suffix="c")
+    capsys.readouterr()
+    call_command("run_backtest", venue="mt5", timeframe="1h", strategies="fx_sweep", train_days=20,
+                 test_days=10, min_trades=1, risk_per_trade="0.01", holdout_from="2026-10-15")
+    out = capsys.readouterr().out
+    assert "HOLD-OUT CONFIRMATION" in out
+    rec = sorted((Path(settings.BASE_DIR) / "research" / "experiments").glob("*fx_sweep.json"))[-1]
+    folds = json.loads(rec.read_text())["folds"]
+    assert folds and all(f["test_end"] > "2026-10-15" for f in folds)

@@ -2,6 +2,17 @@
 
 Newest first.
 
+## 2026-11-12 · FX1-FX3 failed; FX4-FX6 and a hold-out year pre-registered
+
+**Results (operator's run, ADR 0007 rules)**: FX1 fx_trend 276 OOS trades, -0.240 R (CI -0.416
+to -0.054), baseline -0.074: FAIL. FX2 fx_meanrev 170 trades, -0.191 R, baseline -0.066: FAIL.
+FX3 fx_london 993 trades, -0.067 R (CI -0.118 to -0.017), baseline -0.224, halves -0.075 /
+-0.058: FAIL (beats random but not costs). Not re-tuned.
+
+**Built**: FX4 fx_sweep (liquidity sweep, 1h), FX5 fx_tsmom (time-series momentum, 1d), FX6
+fx_xsmom (cross-sectional momentum, 1d), ADR 0008 written first; `--holdout-from` scores only
+trades in the unseen final year. **Tests**: 426 passing.
+
 ## 2026-11-12 · Fix: timeframe guessed from a weekend gap
 
 The operator's first forex run crashed: the timeframe was inferred from the first two bars,

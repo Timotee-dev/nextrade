@@ -53,6 +53,8 @@ class Command(BaseCommand):
         parser.add_argument("--capital", default=None,
                             help="starting cash per fold in the quote currency (default: 20000 NGN on quidax, 1000 USDT on binance)")
         parser.add_argument("--min-trades", type=int, default=100)
+        parser.add_argument("--holdout-from", default=None,
+                            help="YYYY-MM-DD: score only trades from this date (the unseen confirmation period)")
         parser.add_argument("--leverage", default="200",
                             help="margin accounts (mt5 forex): account leverage, e.g. 200 for 1:200")
         parser.add_argument("--expanding", action="store_true",
@@ -117,7 +119,10 @@ class Command(BaseCommand):
                               f"minimum order {min_usdt} USDT")
         cfg = ResearchConfig(train=pd.Timedelta(days=o["train_days"]), test=pd.Timedelta(days=o["test_days"]),
                              model_kind=o["model"], initial_cash=Decimal(capital), min_trades=o["min_trades"],
-                             expanding=o["expanding"], leverage=Decimal(o["leverage"]))
+                             expanding=o["expanding"], leverage=Decimal(o["leverage"]),
+                             holdout_from=pd.Timestamp(o["holdout_from"], tz="UTC") if o["holdout_from"] else None)
+        if o["holdout_from"]:
+            self.stdout.write(f"HOLD-OUT CONFIRMATION: only trades decided from {o['holdout_from']} count")
         limits = scaled_limits(Decimal(o["risk_per_trade"]) if o["risk_per_trade"] else RiskLimits().risk_per_trade,
                                cost_venue)
         costs, risk = cost_model_for(cost_venue, spreads), RiskEngine(limits)

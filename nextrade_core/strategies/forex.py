@@ -141,3 +141,115 @@ class FxLondon(_ForexStrategy):
         long_ok, short_ok = first & long_hit, first & short_hit
         stop_dist = pd.Series(np.where(long_ok, close - lo, hi - close), index=idx)
         return _two_sided(f, long_ok, short_ok, stop_dist, p.target_r, p.max_hold)
+
+
+# ================================================================== batch F5 (ADR 0008)
+# Pre-registered 2026-11-12 after FX1-FX3 failed, BEFORE any test of these three.
+
+# ------------------------------------------------------------------ FX4
+@dataclass(frozen=True)
+class FxSweepParams(StrategyParams):
+    buffer_atr: float = 0.1      # stop this far beyond the sweep bar's extreme
+    target_r: float = 2.0
+    max_hold: int = 24           # 1h bars = one day
+    cooldown_bars: int = 6
+
+
+class FxSweep(_ForexStrategy):
+    """FX4, 1h: 'liquidity sweep' (stop hunt) reversal, as taught in Smart Money Concepts.
+
+    A bar trades ABOVE the previous UTC day's high but CLOSES back below it: short, stop just
+    above that bar's high. Mirror for longs at the previous day's low."""
+
+    code = "fx_sweep"
+    version_tag = "1"
+    required = ("atr",)
+
+    @classmethod
+    def default_params(cls) -> FxSweepParams:
+        return FxSweepParams()
+
+    def _plan(self, f: pd.DataFrame) -> pd.DataFrame:
+        p: FxSweepParams = self.params  # type: ignore[assignment]
+        day = f.index.normalize()
+        daily = f.groupby(day).agg(day_high=("high", "max"), day_low=("low", "min"))
+        prev = daily.shift(1).reindex(day)
+        prev_high = pd.Series(prev["day_high"].to_numpy(), index=f.index)
+        prev_low = pd.Series(prev["day_low"].to_numpy(), index=f.index)
+        close, buf = f["close"], p.buffer_atr * f["atr"]
+        short_ok = (f["high"] > prev_high) & (close < prev_high)
+        long_ok = (f["low"] < prev_low) & (close > prev_low)
+        stop_dist = pd.Series(np.where(short_ok, f["high"] + buf - close, close - (f["low"] - buf)), index=f.index)
+        return _two_sided(f, long_ok & ~short_ok, short_ok & ~long_ok, stop_dist, p.target_r, p.max_hold)
+
+
+# ------------------------------------------------------------------ FX5
+@dataclass(frozen=True)
+class FxTsmomParams(StrategyParams):
+    lookback: int = 126          # daily bars (Exness has short Sunday bars: about 5-6 months)
+    stop_atr: float = 3.0
+    target_r: float = 10.0       # out of reach: the exit is the monthly re-decision (time)
+    max_hold: int = 21           # daily bars, ends before the next month's decision
+    cooldown_bars: int = 0
+
+
+class FxTsmom(_ForexStrategy):
+    """FX5, 1d: time-series momentum. On the first daily bar of each month, each pair is
+    bought if it rose over the lookback and sold short if it fell. Wide catastrophe stop."""
+
+    code = "fx_tsmom"
+    version_tag = "1"
+    required = ("atr",)
+
+    @classmethod
+    def default_params(cls) -> FxTsmomParams:
+        return FxTsmomParams()
+
+    def _plan(self, f: pd.DataFrame) -> pd.DataFrame:
+        p: FxTsmomParams = self.params  # type: ignore[assignment]
+        close = f["close"]
+        mom = close / close.shift(p.lookback) - 1
+        month = pd.Series(f.index.month, index=f.index)
+        first = month != month.shift(1)
+        return _two_sided(f, first & (mom > 0), first & (mom < 0), p.stop_atr * f["atr"], p.target_r, p.max_hold)
+
+
+# ------------------------------------------------------------------ FX6
+@dataclass(frozen=True)
+class FxXsmomParams(StrategyParams):
+    lookback: int = 63           # daily bars, about 2.5-3 months
+    n_each_side: int = 2
+    stop_atr: float = 3.0
+    target_r: float = 10.0
+    max_hold: int = 21
+    cooldown_bars: int = 0
+
+
+class FxXsmom(_ForexStrategy):
+    """FX6, 1d: cross-sectional (relative) momentum. On the first daily bar of each month,
+    rank the pairs by lookback return: buy the strongest 2, sell short the weakest 2."""
+
+    code = "fx_xsmom"
+    version_tag = "1"
+    required = ("atr", "xs_mom", "xs_rank", "xs_count")
+
+    @classmethod
+    def default_params(cls) -> FxXsmomParams:
+        return FxXsmomParams()
+
+    def prepare_frames(self, frames: dict[str, pd.DataFrame]) -> dict[str, pd.DataFrame]:
+        from .rotation import add_cross_sectional_momentum
+        out = add_cross_sectional_momentum(frames, self.params.lookback)
+        count = pd.DataFrame({s: f["xs_mom"] for s, f in out.items()}).notna().sum(axis=1)
+        return {s: f.assign(xs_count=count.reindex(f.index)) for s, f in out.items()}
+
+    def _plan(self, f: pd.DataFrame) -> pd.DataFrame:
+        p: FxXsmomParams = self.params  # type: ignore[assignment]
+        if "xs_rank" not in f:
+            raise KeyError("fx_xsmom needs prepare_frames() first (cross-sectional rank)")
+        month = pd.Series(f.index.month, index=f.index)
+        first = month != month.shift(1)
+        enough = f["xs_count"] >= 2 * p.n_each_side
+        long_ok = first & enough & (f["xs_rank"] <= p.n_each_side)
+        short_ok = first & enough & (f["xs_rank"] > f["xs_count"] - p.n_each_side)
+        return _two_sided(f, long_ok, short_ok, p.stop_atr * f["atr"], p.target_r, p.max_hold)

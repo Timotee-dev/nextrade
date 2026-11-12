@@ -214,3 +214,58 @@ def test_timeframe_inferred_despite_weekend_gap_at_the_start():
     idx = pd.DatetimeIndex([pd.Timestamp("2021-11-14 22:00", tz="UTC")]
                            + list(pd.date_range("2021-11-15 20:00", periods=50, freq="1h", tz="UTC")))
     assert _tf(pd.DataFrame({"close": 1.0}, index=idx)) is Timeframe.H1
+
+
+# ------------------------------------------------------------------ F5 strategies (ADR 0008)
+def test_liquidity_sweep_short_after_false_break_of_yesterdays_high():
+    from nextrade_core.strategies.registry import make
+    f = _fx_frame(n=2400)
+    sigs = make("fx_sweep").generate(f, "EURUSD", Timeframe.H1)
+    assert {s.side for s in sigs} == {Side.LONG, Side.SHORT}
+    day = f.index.normalize()
+    prev_high = f.groupby(day)["high"].max().shift(1)
+    for s in [x for x in sigs if x.side is Side.SHORT][:10]:
+        bar = f.loc[pd.Timestamp(s.bar_time)]
+        ph = prev_high[pd.Timestamp(s.bar_time).normalize()]
+        assert bar["high"] > ph > bar["close"] and s.stop > bar["high"]
+
+
+def _daily_frames(n=900, seeds=(1, 2, 3, 4, 5, 6)):
+    from nextrade_core.features.feature_set import with_features
+    from tests.helpers import random_walk_frame
+    out = {}
+    for k, sd in enumerate(seeds):
+        raw = random_walk_frame(n, seed=sd, minutes_per_bar=1440)
+        out[f"P{k}USD"] = with_features(raw, Timeframe.D1)
+    return out
+
+
+def test_tsmom_enters_once_a_month_in_the_trend_direction():
+    from nextrade_core.strategies.registry import make
+    f = _daily_frames()["P0USD"]
+    sigs = make("fx_tsmom").generate(f, "P0USD", Timeframe.D1)
+    months = [(s.bar_time.year, s.bar_time.month) for s in sigs]
+    assert len(months) == len(set(months)) > 20
+    for s in sigs:
+        i = f.index.get_loc(pd.Timestamp(s.bar_time))
+        rose = f["close"].iloc[i] > f["close"].iloc[i - 126]
+        assert (s.side is Side.LONG) == rose and s.max_hold_bars == 21
+
+
+def test_xsmom_buys_two_strongest_and_sells_two_weakest_each_month():
+    from nextrade_core.strategies.registry import make
+    strat = make("fx_xsmom")
+    frames = strat.prepare_frames(_daily_frames())
+    sigs = [s for sym, f in frames.items() for s in strat.generate(f, sym, Timeframe.D1)]
+    by_month = {}
+    for s in sigs:
+        by_month.setdefault(s.bar_time, []).append(s)
+    full = [v for v in by_month.values() if len(v) == 4]
+    assert len(full) > 15
+    for group in full:
+        assert sum(s.side is Side.LONG for s in group) == 2
+        t = pd.Timestamp(group[0].bar_time)
+        moms = {sym: frames[sym].loc[t, "xs_mom"] for sym in frames}
+        ranked = sorted(moms, key=moms.get, reverse=True)
+        assert {s.symbol for s in group if s.side is Side.LONG} == set(ranked[:2])
+        assert {s.symbol for s in group if s.side is Side.SHORT} == set(ranked[-2:])
