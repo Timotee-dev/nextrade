@@ -296,3 +296,10 @@ def test_unmarked_strategy_without_a_model_is_not_waved_through():
     from nextrade_core.naia.engine import Naia
     naia = Naia(CostModel(), ScoringConfig(max_spread_bps=60.0))
     assert naia.evaluate(_trend_signal(), MarketContext(spread_bps=10.0)).p_source != "rule-based"
+
+
+def test_gate_costs_round_trip_about_half_of_quidax():
+    from nextrade_core.costs.model import cost_model_for
+    g, q = cost_model_for("gate"), cost_model_for("quidax")
+    assert g.round_trip_fraction("X") == pytest.approx(0.0046)
+    assert q.round_trip_fraction("X") == pytest.approx(0.0080)

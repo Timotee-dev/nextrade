@@ -295,7 +295,7 @@ class FxLondonAI(FxLondon):
             h, l_, c, atr = float(hi[t]), float(lo[t]), float(f.at[t, "close"]), float(f.at[t, "atr"])
             beyond = (c - h) if s.side.value == "long" else (l_ - c)
             extra = {"ldn_range_pct": 100 * (h - l_) / c, "ldn_range_atr": (h - l_) / atr if atr else np.nan,
-                     "ldn_break_atr": beyond / atr if atr else np.nan, "ldn_dow": float(t.dayofweek),
+                     "ldn_break_atr": beyond / atr if atr else np.nan, "ldn_dow": float(t.day_of_week),
                      "ldn_hour": t.hour + t.minute / 60, "ldn_short": float(s.side.value == "short")}
             out.append(replace(s, features={**s.features, **extra}))
         return out

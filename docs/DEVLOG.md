@@ -2,6 +2,24 @@
 
 Newest first.
 
+## 2026-11-12 · Gate.io cost model; ADR 0010 (fast crypto strategies at Gate costs)
+
+Added `gate` costs (0.2%/side, 2 bps spread, 2 bps slippage: about 0.46% round trip vs Quidax
+0.80%) and `run_backtest --costs gate`. ADR 0010 pre-registers re-testing trend, meanrev and
+breakout, unchanged, at the lower cost. **Tests**: 431 passing.
+
+## 2026-11-12 · FX7 failed; forex strategy search closed
+
+FX7 fx_london_ai (lgbm, data to 2025-11-12): 3,674 signals; NAIA rejected 2,297 as low expected
+value; 15 filtered trades, -0.212 R (CI -0.690 to +0.314); unfiltered 237 trades -0.161 R;
+baseline -0.161. FAIL on all five rules. The model found no profitable subset of breakouts.
+**Decision**: after seven pre-registered forex tests (ADR 0007-0009) with no pass, the forex
+strategy search is closed. More variations on the same data would make a lucky pass likely.
+Reopen only with something new: a cheaper venue, materially more data, or a new idea, each
+pre-registered with a hold-out. Forex code stays in place and tested.
+Approved strategies: T1 trendfilter only (crypto, paper trading on Quidax prices).
+Also: Timestamp.dayofweek -> day_of_week (pandas deprecation).
+
 ## 2026-11-12 · FX5/FX6 fail on 2018-2021; FX7 AI-filtered London breakout pre-registered
 
 Exness daily history starts 2018-07. Unseen 2018-07 to 2021-11: FX6 fx_xsmom 88 trades -0.042 R

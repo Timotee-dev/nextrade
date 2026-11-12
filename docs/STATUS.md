@@ -19,18 +19,15 @@ Last updated: 2026-11-11 (T1 passed; Quidax paper trading)
 | | 12. Telegram | Built; tests pass |
 | | 13. Adaptive learning (governance) | Built; tests pass |
 | | 14. Controlled live trading | Not started (live Binance broker, `go_live_check`, `run_live`) |
-| Forex | FX1-FX6 all FAIL (ADR 0007, 0008, incl. 2018-2021 check); FX7 AI filter pre-registered (ADR 0009) | No forex strategy approved yet |
+| Forex | FX1-FX7 all FAIL (ADR 0007-0009); search closed 2026-11-12 | No forex strategy approved |
 | Capacity | 100 trades/day per market | Not yet load-tested |
 
 Tests: 430 passing, 94% line coverage. Phases 4-13 were first built in an earlier
 session whose log entries were lost; see the DEVLOG recovery note.
 
 ## Open items for the operator
-- Leave `python manage.py run_paper_quidax` running (start once with `--new-run`). T1 trades
-  about 6 times a year, so judging it takes months, not days. Check the dashboard weekly.
-- Run `python scripts\check_binance_access.py` and share the output.
-- Run `python manage.py load_binance_history`, then `python manage.py data_quality_report`.
-- Start `python manage.py record_live` and leave it running for 7 days; then run
-  `python manage.py data_quality_report --days 7` and share the result.
-- Optional: PostgreSQL for full history (Docker Desktop `docker compose up -d`, or a native
-  install), then set DATABASE_URL and `pip install -r requirements-postgres.txt`.
+- Keep `.venv\Scripts\python manage.py run_paper_quidax` running (no `--new-run`: it resumes
+  run 1). T1 trades about 6 times a year; review after 2-3 months. Stop the laptop sleeping.
+- Weekly: dashboard at http://127.0.0.1:8004/dashboard/ (`runserver 8004` in a second window).
+- No real money until T1's paper results match its backtest (then Phase 14: NGN 10,000 cap).
+- Forex: no approved strategy. The Exness demo can stay; nothing runs on it.

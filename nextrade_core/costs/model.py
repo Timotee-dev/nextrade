@@ -55,6 +55,8 @@ VENUE_COSTS = {
     # 2026-11-12 were 0.65-2.9 bps on 8 majors; MT5 records the LOWEST spread in each bar, so
     # measured values are doubled (SPREAD_MULTIPLIER) and 0.5 bps slippage is added per side.
     "mt5": dict(fee_rate=0.0, spread_bps=2.0, slippage_bps=0.5),
+    # Gate.io spot, standard tier: 0.2% per side (taker); tight books on major USDT pairs.
+    "gate": dict(fee_rate=0.002, spread_bps=2.0, slippage_bps=2.0),
 }
 SPREAD_MULTIPLIER = {"mt5": 2.0}
 

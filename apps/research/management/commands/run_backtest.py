@@ -38,7 +38,7 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument("--venue", default=settings.NEXTRADE["VENUE"], choices=["quidax", "binance", "gate", "mt5"],
                             help="where the price history comes from")
-        parser.add_argument("--costs", default=None, choices=["quidax", "binance", "mt5"],
+        parser.add_argument("--costs", default=None, choices=["quidax", "binance", "mt5", "gate"],
                             help="whose fees and spreads to charge (default: quidax for gate data, else the venue)")
         parser.add_argument("--ngn-per-usdt", default=None,
                             help="rate for Quidax-cost research on USDT data (default: latest stored USDT/NGN, else 1400)")
