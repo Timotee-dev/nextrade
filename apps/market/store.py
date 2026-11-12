@@ -29,6 +29,12 @@ class CandleStore:
     def _inst(self, symbol: str) -> Instrument:
         return self.instruments[symbol.upper()]
 
+    def first_open_time(self, symbol: str, timeframe: Timeframe = Timeframe.M1) -> datetime | None:
+        from django.db.models import Min
+        close_old_connections()
+        return (CandleRow.objects.filter(instrument=self._inst(symbol), timeframe=timeframe.value)
+                .aggregate(m=Min("open_time"))["m"])
+
     def last_open_time(self, symbol: str, timeframe: Timeframe = Timeframe.M1) -> datetime | None:
         close_old_connections()
         return (CandleRow.objects.filter(instrument=self._inst(symbol), timeframe=timeframe.value)

@@ -2,6 +2,15 @@
 
 Newest first.
 
+## 2026-11-12 · FX1-FX6 after the fix: all fail; `--backfill` for longer daily history
+
+Re-run with rules unchanged: FX1 -0.260 R (281 trades), FX2 -0.162 R (195), FX3 -0.083 R (876,
+baseline -0.225), FX4 -0.309 R (352, baseline -0.530), FX5 -0.319 R (125), FX6 +0.019 R (112,
+CI -0.183 to +0.246, halves -0.261 / +0.300). All FAIL. FX6 is the only non-negative one; it is
+tested next on years it has never seen (2006-2021) if the broker has them.
+`load_mt5_history --years N` only extended forward from stored bars; `--backfill` now fetches
+older bars in front. **Tests**: 428 passing.
+
 ## 2026-11-12 · Bug: same-bar forex trades blocked and their risk understated; all FX re-run
 
 **FX4-FX6 first results (ADR 0008 rules, data to 2025-11-12)**: FX4 fx_sweep 316 trades, -0.327 R

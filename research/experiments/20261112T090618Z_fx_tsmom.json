@@ -1,0 +1,426 @@
+{
+  "written_at": "20261112T090618Z",
+  "git_commit": "dd44bbd",
+  "strategy": "fx_tsmom-v1-bff162f9",
+  "model": "hitrate",
+  "timeframe": "1d",
+  "symbols": [
+    "AUDUSD",
+    "EURJPY",
+    "EURUSD",
+    "GBPUSD",
+    "NZDUSD",
+    "USDCAD",
+    "USDCHF",
+    "USDJPY"
+  ],
+  "period": [
+    "2021-11-14 00:00:00+00:00",
+    "2025-11-12 00:00:00+00:00"
+  ],
+  "feature_set": "fs-1-7fd6cd9102",
+  "dataset_hash": "9c7f776d662253b3",
+  "config": {
+    "train": "365 days 00:00:00",
+    "test": "90 days 00:00:00",
+    "embargo": "1 days 00:00:00",
+    "model_kind": "hitrate",
+    "initial_cash": "10000",
+    "min_trades": "100",
+    "scoring": "{'hurdle_r': 0.1, 'uncertainty_k': 1.0, 'max_uncertainty': 0.15, 'max_spread_bps': 15.0, 'min_quote_volume_24h': 1000000.0, 'allowed_regimes': {}}",
+    "expanding": "False",
+    "leverage": "200",
+    "holdout_from": "None",
+    "min_train_signals": "30"
+  },
+  "summary": {
+    "trades": 125,
+    "initial_cash": 10000.0,
+    "gross_profit": 3004.392662367584,
+    "gross_loss": 6498.326967039029,
+    "net_profit": -3493.9343046714466,
+    "fees": 0.0,
+    "win_rate": 0.312,
+    "avg_win": 77.03570929147651,
+    "avg_loss": -75.56194147719802,
+    "expectancy": -27.951474437371573,
+    "expectancy_r": -0.3188393140282124,
+    "expectancy_r_ci95": [
+      -0.476939584176985,
+      -0.16503771855792795
+    ],
+    "profit_factor": 0.46233325556047533,
+    "avg_bars_held": 14.6,
+    "exit_reasons": {
+      "stop": 63,
+      "time": 48,
+      "end_of_data": 14
+    },
+    "risk_of_ruin_50pct_dd": 0.0,
+    "cost_share_of_gross": 0.0
+  },
+  "baseline": {
+    "trades": 117,
+    "initial_cash": 10000.0,
+    "gross_profit": 3202.231025061656,
+    "gross_loss": 4117.661856656653,
+    "net_profit": -915.4308315949974,
+    "fees": 0.0,
+    "win_rate": 0.42735042735042733,
+    "avg_win": 64.04462050123313,
+    "avg_loss": -61.45763965159184,
+    "expectancy": -7.824195141837584,
+    "expectancy_r": -0.09497544413457865,
+    "expectancy_r_ci95": [
+      -0.24262869814883894,
+      0.05168586415491879
+    ],
+    "profit_factor": 0.7776818827133407,
+    "avg_bars_held": 15.136752136752136,
+    "exit_reasons": {
+      "time": 57,
+      "stop": 37,
+      "end_of_data": 23
+    },
+    "risk_of_ruin_50pct_dd": 0.0,
+    "cost_share_of_gross": 0.0
+  },
+  "gate": {
+    "pass": false,
+    "reasons": [
+      "95% interval of mean net R does not lie above zero",
+      "does not beat the random-entry baseline",
+      "not positive in both halves of the test period (-0.354, -0.284)"
+    ],
+    "trades": 125,
+    "mean_r": -0.3188393140282124,
+    "mean_r_ci95": [
+      -0.476939584176985,
+      -0.16503771855792795
+    ],
+    "baseline_mean_r": -0.09497544413457865,
+    "halves_mean_r": [
+      -0.3538764274442623,
+      -0.2843583452695603
+    ]
+  },
+  "folds": [
+    {
+      "fold": 0,
+      "test_start": "2023-05-02 00:00:00+00:00",
+      "test_end": "2023-07-31 00:00:00+00:00",
+      "train_signals": 96,
+      "train_hit_rate": 0.0,
+      "model": "hitrate",
+      "model_notes": [],
+      "trades": 15,
+      "net_return": -0.034449657502369724,
+      "max_drawdown": 0.050700605981042535,
+      "win_rate": 0.3333333333333333,
+      "expectancy_r": -0.2770705154224135,
+      "funnel": {
+        "signals": 24,
+        "rejected_by_nara": 9,
+        "entries": 15,
+        "closed": 15
+      },
+      "rejections": {
+        "nara:cluster_risk_within_limit": 9
+      },
+      "halts": [
+        {
+          "time": "2023-06-09 00:00:00+00:00",
+          "halt": "pause_after_consecutive_losses",
+          "reason": "6 losses in a row"
+        }
+      ]
+    },
+    {
+      "fold": 1,
+      "test_start": "2023-07-31 00:00:00+00:00",
+      "test_end": "2023-10-29 00:00:00+00:00",
+      "train_signals": 96,
+      "train_hit_rate": 0.0,
+      "model": "hitrate",
+      "model_notes": [],
+      "trades": 10,
+      "net_return": -0.015606271013429596,
+      "max_drawdown": 0.047929730393429626,
+      "win_rate": 0.4,
+      "expectancy_r": -0.19527211938740557,
+      "funnel": {
+        "signals": 24,
+        "rejected_by_nara": 6,
+        "entries": 10,
+        "closed": 10
+      },
+      "rejections": {
+        "nara:cluster_risk_within_limit": 6
+      },
+      "halts": []
+    },
+    {
+      "fold": 2,
+      "test_start": "2023-10-29 00:00:00+00:00",
+      "test_end": "2024-01-27 00:00:00+00:00",
+      "train_signals": 96,
+      "train_hit_rate": 0.0,
+      "model": "hitrate",
+      "model_notes": [],
+      "trades": 10,
+      "net_return": -0.060850668484606074,
+      "max_drawdown": 0.06118402173460602,
+      "win_rate": 0.2,
+      "expectancy_r": -0.6602900465747419,
+      "funnel": {
+        "signals": 24,
+        "rejected_by_nara": 6,
+        "entries": 10,
+        "closed": 10
+      },
+      "rejections": {
+        "nara:cluster_risk_within_limit": 6
+      },
+      "halts": [
+        {
+          "time": "2023-11-03 00:00:00+00:00",
+          "halt": "pause_until_next_utc_day",
+          "reason": "daily loss 2.26% reached limit 2.00%"
+        }
+      ]
+    },
+    {
+      "fold": 3,
+      "test_start": "2024-01-27 00:00:00+00:00",
+      "test_end": "2024-04-26 00:00:00+00:00",
+      "train_signals": 96,
+      "train_hit_rate": 0.0,
+      "model": "hitrate",
+      "model_notes": [],
+      "trades": 10,
+      "net_return": -0.016919759082793084,
+      "max_drawdown": 0.03536581937296723,
+      "win_rate": 0.3,
+      "expectancy_r": -0.17092824524704472,
+      "funnel": {
+        "signals": 24,
+        "rejected_by_nara": 6,
+        "entries": 10,
+        "closed": 10
+      },
+      "rejections": {
+        "nara:cluster_risk_within_limit": 6
+      },
+      "halts": []
+    },
+    {
+      "fold": 4,
+      "test_start": "2024-04-26 00:00:00+00:00",
+      "test_end": "2024-07-25 00:00:00+00:00",
+      "train_signals": 92,
+      "train_hit_rate": 0.0,
+      "model": "hitrate",
+      "model_notes": [],
+      "trades": 15,
+      "net_return": -0.0480353637500992,
+      "max_drawdown": 0.0480353637500992,
+      "win_rate": 0.3333333333333333,
+      "expectancy_r": -0.3662499260269966,
+      "funnel": {
+        "signals": 24,
+        "rejected_by_nara": 9,
+        "entries": 15,
+        "closed": 15
+      },
+      "rejections": {
+        "nara:cluster_risk_within_limit": 9
+      },
+      "halts": []
+    },
+    {
+      "fold": 5,
+      "test_start": "2024-07-25 00:00:00+00:00",
+      "test_end": "2024-10-23 00:00:00+00:00",
+      "train_signals": 93,
+      "train_hit_rate": 0.0,
+      "model": "hitrate",
+      "model_notes": [],
+      "trades": 15,
+      "net_return": -0.08097774932406465,
+      "max_drawdown": 0.08097774932406465,
+      "win_rate": 0.2,
+      "expectancy_r": -0.6242223842599416,
+      "funnel": {
+        "signals": 24,
+        "rejected_by_nara": 9,
+        "entries": 15,
+        "closed": 15
+      },
+      "rejections": {
+        "nara:cluster_risk_within_limit": 9
+      },
+      "halts": [
+        {
+          "time": "2024-09-11 00:00:00+00:00",
+          "halt": "pause_after_consecutive_losses",
+          "reason": "7 losses in a row"
+        }
+      ]
+    },
+    {
+      "fold": 6,
+      "test_start": "2024-10-23 00:00:00+00:00",
+      "test_end": "2025-01-21 00:00:00+00:00",
+      "train_signals": 95,
+      "train_hit_rate": 0.0,
+      "model": "hitrate",
+      "model_notes": [],
+      "trades": 10,
+      "net_return": 0.019680647478717672,
+      "max_drawdown": 0.031371949797855514,
+      "win_rate": 0.5,
+      "expectancy_r": 0.23539006563737175,
+      "funnel": {
+        "signals": 24,
+        "rejected_by_nara": 6,
+        "entries": 10,
+        "closed": 10
+      },
+      "rejections": {
+        "nara:cluster_risk_within_limit": 6
+      },
+      "halts": [
+        {
+          "time": "2025-01-20 00:00:00+00:00",
+          "halt": "pause_until_next_utc_day",
+          "reason": "daily loss 2.26% reached limit 2.00%"
+        }
+      ]
+    },
+    {
+      "fold": 7,
+      "test_start": "2025-01-21 00:00:00+00:00",
+      "test_end": "2025-04-21 00:00:00+00:00",
+      "train_signals": 88,
+      "train_hit_rate": 0.0,
+      "model": "hitrate",
+      "model_notes": [],
+      "trades": 15,
+      "net_return": -0.11813103645408551,
+      "max_drawdown": 0.11813103645408551,
+      "win_rate": 0.0,
+      "expectancy_r": -0.9126506764484554,
+      "funnel": {
+        "signals": 24,
+        "rejected_by_nara": 9,
+        "entries": 15,
+        "closed": 15
+      },
+      "rejections": {
+        "nara:cluster_risk_within_limit": 9
+      },
+      "halts": [
+        {
+          "time": "2025-03-04 00:00:00+00:00",
+          "halt": "pause_until_next_utc_day",
+          "reason": "daily loss 2.12% reached limit 2.00%"
+        },
+        {
+          "time": "2025-03-05 00:00:00+00:00",
+          "halt": "pause_after_consecutive_losses",
+          "reason": "7 losses in a row"
+        },
+        {
+          "time": "2025-04-03 00:00:00+00:00",
+          "halt": "risk_shutdown",
+          "reason": "drawdown 10.89% reached limit 10.00%"
+        }
+      ]
+    },
+    {
+      "fold": 8,
+      "test_start": "2025-04-21 00:00:00+00:00",
+      "test_end": "2025-07-20 00:00:00+00:00",
+      "train_signals": 93,
+      "train_hit_rate": 0.0,
+      "model": "hitrate",
+      "model_notes": [],
+      "trades": 15,
+      "net_return": 0.02783298613861751,
+      "max_drawdown": 0.022070322193110004,
+      "win_rate": 0.6,
+      "expectancy_r": 0.22114877606858366,
+      "funnel": {
+        "signals": 24,
+        "rejected_by_nara": 9,
+        "entries": 15,
+        "closed": 15
+      },
+      "rejections": {
+        "nara:cluster_risk_within_limit": 9
+      },
+      "halts": []
+    },
+    {
+      "fold": 9,
+      "test_start": "2025-07-20 00:00:00+00:00",
+      "test_end": "2025-10-18 00:00:00+00:00",
+      "train_signals": 92,
+      "train_hit_rate": 0.0,
+      "model": "hitrate",
+      "model_notes": [],
+      "trades": 10,
+      "net_return": -0.021936558473031997,
+      "max_drawdown": 0.04103483598820845,
+      "win_rate": 0.3,
+      "expectancy_r": -0.2558239906470002,
+      "funnel": {
+        "signals": 24,
+        "rejected_by_nara": 6,
+        "entries": 10,
+        "closed": 10
+      },
+      "rejections": {
+        "nara:cluster_risk_within_limit": 6
+      },
+      "halts": []
+    }
+  ],
+  "raw": {
+    "trades": 125,
+    "initial_cash": 10000.0,
+    "gross_profit": 3004.392662367584,
+    "gross_loss": 6498.326967039029,
+    "net_profit": -3493.9343046714466,
+    "fees": 0.0,
+    "win_rate": 0.312,
+    "avg_win": 77.03570929147651,
+    "avg_loss": -75.56194147719802,
+    "expectancy": -27.951474437371573,
+    "expectancy_r": -0.3188393140282124,
+    "expectancy_r_ci95": [
+      -0.476939584176985,
+      -0.16503771855792795
+    ],
+    "profit_factor": 0.46233325556047533,
+    "avg_bars_held": 14.6,
+    "exit_reasons": {
+      "stop": 63,
+      "time": 48,
+      "end_of_data": 14
+    },
+    "risk_of_ruin_50pct_dd": 0.0,
+    "cost_share_of_gross": 0.0
+  },
+  "diagnostics": {
+    "signals": 344,
+    "signals_per_day": 0.269,
+    "labelled_signals": 336,
+    "label_hit_rate": 0.0,
+    "label_mean_r_net": -0.1910178852750273,
+    "naia_rejections": {
+      "nara:cluster_risk_within_limit": 75
+    },
+    "judged_raw": true
+  }
+}

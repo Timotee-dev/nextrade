@@ -103,3 +103,14 @@ def test_holdout_counts_only_trades_after_the_date(fake, capsys):
     rec = sorted((Path(settings.BASE_DIR) / "research" / "experiments").glob("*fx_sweep.json"))[-1]
     folds = json.loads(rec.read_text())["folds"]
     assert folds and all(f["test_end"] > "2026-10-15" for f in folds)
+
+
+def test_backfill_fetches_older_bars_in_front(fake, capsys):
+    call_command("load_mt5_history", symbols="EURUSD", timeframes="1d", years=0.2, suffix="c")
+    first = CandleRow.objects.filter(timeframe="1d").order_by("open_time").first().open_time
+    call_command("load_mt5_history", symbols="EURUSD", timeframes="1d", years=1, suffix="c")
+    assert CandleRow.objects.filter(timeframe="1d").order_by("open_time").first().open_time == first  # plain: no-op
+    call_command("load_mt5_history", symbols="EURUSD", timeframes="1d", years=1, suffix="c", backfill=True)
+    new_first = CandleRow.objects.filter(timeframe="1d").order_by("open_time").first().open_time
+    assert new_first < first - timedelta(days=200)
+    assert CandleRow.objects.filter(timeframe="1d").count() > 250

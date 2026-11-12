@@ -1,0 +1,997 @@
+{
+  "written_at": "20261112T090438Z",
+  "git_commit": "dd44bbd",
+  "strategy": "fx_trend-v1-0687878f",
+  "model": "hitrate",
+  "timeframe": "1h",
+  "symbols": [
+    "AUDUSD",
+    "EURJPY",
+    "EURUSD",
+    "GBPUSD",
+    "NZDUSD",
+    "USDCAD",
+    "USDCHF",
+    "USDJPY"
+  ],
+  "period": [
+    "2021-11-14 00:00:00+00:00",
+    "2026-11-12 09:04:12.849064+00:00"
+  ],
+  "feature_set": "fs-1-7fd6cd9102",
+  "dataset_hash": "01460065c7fa6f3b",
+  "config": {
+    "train": "365 days 00:00:00",
+    "test": "90 days 00:00:00",
+    "embargo": "1 days 00:00:00",
+    "model_kind": "hitrate",
+    "initial_cash": "10000",
+    "min_trades": "100",
+    "scoring": "{'hurdle_r': 0.1, 'uncertainty_k': 1.0, 'max_uncertainty': 0.15, 'max_spread_bps': 15.0, 'min_quote_volume_24h': 1000000.0, 'allowed_regimes': {}}",
+    "expanding": "False",
+    "leverage": "200",
+    "holdout_from": "None",
+    "min_train_signals": "30"
+  },
+  "summary": {
+    "trades": 281,
+    "initial_cash": 10000.0,
+    "gross_profit": 13846.757943609997,
+    "gross_loss": 20466.01814840047,
+    "net_profit": -6619.260204790477,
+    "fees": 0.0,
+    "win_rate": 0.22419928825622776,
+    "avg_win": 219.7898086287301,
+    "avg_loss": -93.88081719449758,
+    "expectancy": -23.5560861380444,
+    "expectancy_r": -0.25954464947351613,
+    "expectancy_r_ci95": [
+      -0.43079779218353675,
+      -0.0829227920490746
+    ],
+    "profit_factor": 0.6765731293310807,
+    "avg_bars_held": 24.384341637010674,
+    "exit_reasons": {
+      "stop": 216,
+      "target": 55,
+      "time": 7,
+      "end_of_data": 3
+    },
+    "risk_of_ruin_50pct_dd": 0.0,
+    "cost_share_of_gross": 0.0
+  },
+  "baseline": {
+    "trades": 555,
+    "initial_cash": 10000.0,
+    "gross_profit": 34043.188036276275,
+    "gross_loss": 39262.09147752441,
+    "net_profit": -5218.90344124813,
+    "fees": 0.0,
+    "win_rate": 0.2594594594594595,
+    "avg_win": 236.41102802969635,
+    "avg_loss": -95.5282031083319,
+    "expectancy": -9.403429623870505,
+    "expectancy_r": -0.10091777850427198,
+    "expectancy_r_ci95": [
+      -0.2302882995466563,
+      0.03851298329622009
+    ],
+    "profit_factor": 0.8670752564407911,
+    "avg_bars_held": 26.322522522522522,
+    "exit_reasons": {
+      "stop": 408,
+      "target": 134,
+      "time": 12,
+      "end_of_data": 1
+    },
+    "risk_of_ruin_50pct_dd": 0.0,
+    "cost_share_of_gross": 0.0
+  },
+  "gate": {
+    "pass": false,
+    "reasons": [
+      "95% interval of mean net R does not lie above zero",
+      "does not beat the random-entry baseline",
+      "not positive in both halves of the test period (-0.116, -0.402)"
+    ],
+    "trades": 281,
+    "mean_r": -0.25954464947351613,
+    "mean_r_ci95": [
+      -0.43079779218353675,
+      -0.0829227920490746
+    ],
+    "baseline_mean_r": -0.10091777850427198,
+    "halves_mean_r": [
+      -0.11620008440988584,
+      -0.40187258641612783
+    ]
+  },
+  "folds": [
+    {
+      "fold": 0,
+      "test_start": "2022-11-25 13:00:00+00:00",
+      "test_end": "2023-02-23 13:00:00+00:00",
+      "train_signals": 1348,
+      "train_hit_rate": 0.2611,
+      "model": "hitrate",
+      "model_notes": [],
+      "trades": 34,
+      "net_return": -0.022251995413374193,
+      "max_drawdown": 0.09919365638793698,
+      "win_rate": 0.2647058823529412,
+      "expectancy_r": -0.0516642289978658,
+      "funnel": {
+        "signals": 282,
+        "entries": 34,
+        "rejected_by_nara": 26,
+        "closed": 34
+      },
+      "rejections": {
+        "nara:cluster_risk_within_limit": 26,
+        "skip:already_in_position": 18,
+        "nara:open_risk_within_limit": 10,
+        "skip:halted": 204
+      },
+      "halts": [
+        {
+          "time": "2022-11-28 15:00:00+00:00",
+          "halt": "pause_until_next_utc_day",
+          "reason": "daily loss 2.36% reached limit 2.00%"
+        },
+        {
+          "time": "2022-11-29 14:00:00+00:00",
+          "halt": "pause_until_next_utc_day",
+          "reason": "daily loss 2.15% reached limit 2.00%"
+        },
+        {
+          "time": "2022-12-15 08:00:00+00:00",
+          "halt": "pause_after_consecutive_losses",
+          "reason": "6 losses in a row"
+        },
+        {
+          "time": "2022-12-19 16:00:00+00:00",
+          "halt": "pause_until_next_utc_day",
+          "reason": "daily loss 3.16% reached limit 2.00%"
+        },
+        {
+          "time": "2022-12-20 03:00:00+00:00",
+          "halt": "pause_after_consecutive_losses",
+          "reason": "6 losses in a row"
+        },
+        {
+          "time": "2022-12-21 01:00:00+00:00",
+          "halt": "risk_shutdown",
+          "reason": "weekly loss 5.30% reached limit 5.00%"
+        }
+      ]
+    },
+    {
+      "fold": 1,
+      "test_start": "2023-02-23 13:00:00+00:00",
+      "test_end": "2023-05-24 13:00:00+00:00",
+      "train_signals": 1315,
+      "train_hit_rate": 0.2365,
+      "model": "hitrate",
+      "model_notes": [],
+      "trades": 11,
+      "net_return": -0.05990272527899965,
+      "max_drawdown": 0.10407780886744855,
+      "win_rate": 0.18181818181818182,
+      "expectancy_r": -0.6027045967546105,
+      "funnel": {
+        "signals": 328,
+        "entries": 11,
+        "closed": 11,
+        "rejected_by_nara": 4
+      },
+      "rejections": {
+        "skip:already_in_position": 6,
+        "nara:cluster_risk_within_limit": 4,
+        "nara:stress_loss_within_limit": 2,
+        "nara:open_risk_within_limit": 1,
+        "skip:halted": 307
+      },
+      "halts": [
+        {
+          "time": "2023-02-23 18:00:00+00:00",
+          "halt": "pause_until_next_utc_day",
+          "reason": "daily loss 2.72% reached limit 2.00%"
+        },
+        {
+          "time": "2023-02-27 15:00:00+00:00",
+          "halt": "pause_until_next_utc_day",
+          "reason": "daily loss 2.34% reached limit 2.00%"
+        },
+        {
+          "time": "2023-02-28 17:00:00+00:00",
+          "halt": "risk_shutdown",
+          "reason": "weekly loss 5.07% reached limit 5.00%"
+        }
+      ]
+    },
+    {
+      "fold": 2,
+      "test_start": "2023-05-24 13:00:00+00:00",
+      "test_end": "2023-08-22 13:00:00+00:00",
+      "train_signals": 1279,
+      "train_hit_rate": 0.2197,
+      "model": "hitrate",
+      "model_notes": [],
+      "trades": 19,
+      "net_return": 0.009968791653713671,
+      "max_drawdown": 0.10288730930082135,
+      "win_rate": 0.3157894736842105,
+      "expectancy_r": 0.07857272896635156,
+      "funnel": {
+        "signals": 351,
+        "entries": 19,
+        "rejected_by_nara": 14,
+        "closed": 19
+      },
+      "rejections": {
+        "skip:already_in_position": 23,
+        "nara:open_risk_within_limit": 9,
+        "nara:cluster_risk_within_limit": 14,
+        "skip:halted": 294
+      },
+      "halts": [
+        {
+          "time": "2023-05-26 09:00:00+00:00",
+          "halt": "pause_until_next_utc_day",
+          "reason": "daily loss 2.06% reached limit 2.00%"
+        },
+        {
+          "time": "2023-05-30 11:00:00+00:00",
+          "halt": "pause_until_next_utc_day",
+          "reason": "daily loss 2.23% reached limit 2.00%"
+        },
+        {
+          "time": "2023-06-05 14:00:00+00:00",
+          "halt": "pause_until_next_utc_day",
+          "reason": "daily loss 3.68% reached limit 2.00%"
+        },
+        {
+          "time": "2023-06-06 00:00:00+00:00",
+          "halt": "pause_after_consecutive_losses",
+          "reason": "8 losses in a row"
+        },
+        {
+          "time": "2023-06-07 02:00:00+00:00",
+          "halt": "risk_shutdown",
+          "reason": "weekly loss 5.21% reached limit 5.00%"
+        }
+      ]
+    },
+    {
+      "fold": 3,
+      "test_start": "2023-08-22 13:00:00+00:00",
+      "test_end": "2023-11-20 13:00:00+00:00",
+      "train_signals": 1308,
+      "train_hit_rate": 0.2202,
+      "model": "hitrate",
+      "model_notes": [],
+      "trades": 13,
+      "net_return": -0.05516163350395431,
+      "max_drawdown": 0.08447384303544037,
+      "win_rate": 0.15384615384615385,
+      "expectancy_r": -0.47841734773778677,
+      "funnel": {
+        "signals": 323,
+        "entries": 13,
+        "closed": 13,
+        "rejected_by_nara": 10
+      },
+      "rejections": {
+        "skip:already_in_position": 7,
+        "nara:cluster_risk_within_limit": 10,
+        "nara:open_risk_within_limit": 3,
+        "nara:stress_loss_within_limit": 1,
+        "skip:halted": 291
+      },
+      "halts": [
+        {
+          "time": "2023-08-23 14:00:00+00:00",
+          "halt": "pause_until_next_utc_day",
+          "reason": "daily loss 2.19% reached limit 2.00%"
+        },
+        {
+          "time": "2023-08-29 15:00:00+00:00",
+          "halt": "pause_until_next_utc_day",
+          "reason": "daily loss 2.82% reached limit 2.00%"
+        },
+        {
+          "time": "2023-08-30 12:00:00+00:00",
+          "halt": "risk_shutdown",
+          "reason": "weekly loss 5.22% reached limit 5.00%"
+        }
+      ]
+    },
+    {
+      "fold": 4,
+      "test_start": "2023-11-20 13:00:00+00:00",
+      "test_end": "2024-02-18 13:00:00+00:00",
+      "train_signals": 1289,
+      "train_hit_rate": 0.2064,
+      "model": "hitrate",
+      "model_notes": [],
+      "trades": 8,
+      "net_return": -0.011672707196033083,
+      "max_drawdown": 0.09590375895642766,
+      "win_rate": 0.25,
+      "expectancy_r": -0.128735598278361,
+      "funnel": {
+        "signals": 305,
+        "entries": 8,
+        "rejected_by_nara": 3,
+        "closed": 8
+      },
+      "rejections": {
+        "skip:already_in_position": 5,
+        "nara:open_risk_within_limit": 2,
+        "nara:cluster_risk_within_limit": 3,
+        "skip:halted": 289
+      },
+      "halts": [
+        {
+          "time": "2023-11-21 18:00:00+00:00",
+          "halt": "pause_until_next_utc_day",
+          "reason": "daily loss 2.38% reached limit 2.00%"
+        },
+        {
+          "time": "2023-11-23 12:00:00+00:00",
+          "halt": "risk_shutdown",
+          "reason": "weekly loss 5.69% reached limit 5.00%"
+        }
+      ]
+    },
+    {
+      "fold": 5,
+      "test_start": "2024-02-18 13:00:00+00:00",
+      "test_end": "2024-05-18 13:00:00+00:00",
+      "train_signals": 1319,
+      "train_hit_rate": 0.2381,
+      "model": "hitrate",
+      "model_notes": [],
+      "trades": 17,
+      "net_return": -0.004280145846276562,
+      "max_drawdown": 0.07395373398714067,
+      "win_rate": 0.29411764705882354,
+      "expectancy_r": -0.032611744040431864,
+      "funnel": {
+        "signals": 337,
+        "entries": 17,
+        "rejected_by_nara": 18,
+        "closed": 17
+      },
+      "rejections": {
+        "nara:stress_loss_within_limit": 14,
+        "skip:already_in_position": 11,
+        "nara:cluster_risk_within_limit": 5,
+        "skip:halted": 290
+      },
+      "halts": [
+        {
+          "time": "2024-02-27 12:00:00+00:00",
+          "halt": "pause_until_next_utc_day",
+          "reason": "daily loss 2.10% reached limit 2.00%"
+        },
+        {
+          "time": "2024-02-29 11:00:00+00:00",
+          "halt": "pause_until_next_utc_day",
+          "reason": "daily loss 2.43% reached limit 2.00%"
+        },
+        {
+          "time": "2024-03-01 15:00:00+00:00",
+          "halt": "risk_shutdown",
+          "reason": "weekly loss 5.29% reached limit 5.00%"
+        }
+      ]
+    },
+    {
+      "fold": 6,
+      "test_start": "2024-05-18 13:00:00+00:00",
+      "test_end": "2024-08-16 13:00:00+00:00",
+      "train_signals": 1323,
+      "train_hit_rate": 0.2381,
+      "model": "hitrate",
+      "model_notes": [],
+      "trades": 6,
+      "net_return": -0.05346700431863005,
+      "max_drawdown": 0.05346700431863005,
+      "win_rate": 0.0,
+      "expectancy_r": -1.0936855407055763,
+      "funnel": {
+        "signals": 337,
+        "entries": 6,
+        "closed": 6
+      },
+      "rejections": {
+        "skip:halted": 330
+      },
+      "halts": [
+        {
+          "time": "2024-05-20 17:00:00+00:00",
+          "halt": "pause_until_next_utc_day",
+          "reason": "daily loss 2.13% reached limit 2.00%"
+        },
+        {
+          "time": "2024-05-21 12:00:00+00:00",
+          "halt": "pause_until_next_utc_day",
+          "reason": "daily loss 2.32% reached limit 2.00%"
+        },
+        {
+          "time": "2024-05-22 04:00:00+00:00",
+          "halt": "risk_shutdown",
+          "reason": "weekly loss 5.35% reached limit 5.00%"
+        }
+      ]
+    },
+    {
+      "fold": 7,
+      "test_start": "2024-08-16 13:00:00+00:00",
+      "test_end": "2024-11-14 13:00:00+00:00",
+      "train_signals": 1302,
+      "train_hit_rate": 0.2404,
+      "model": "hitrate",
+      "model_notes": [],
+      "trades": 28,
+      "net_return": 0.03334348362729478,
+      "max_drawdown": 0.1029252581315101,
+      "win_rate": 0.35714285714285715,
+      "expectancy_r": 0.19706285975105178,
+      "funnel": {
+        "signals": 351,
+        "entries": 28,
+        "rejected_by_nara": 14,
+        "closed": 28
+      },
+      "rejections": {
+        "nara:cluster_risk_within_limit": 13,
+        "skip:already_in_position": 14,
+        "nara:open_risk_within_limit": 6,
+        "nara:stress_loss_within_limit": 4,
+        "skip:halted": 295
+      },
+      "halts": [
+        {
+          "time": "2024-08-20 02:00:00+00:00",
+          "halt": "pause_until_next_utc_day",
+          "reason": "daily loss 2.88% reached limit 2.00%"
+        },
+        {
+          "time": "2024-08-22 13:00:00+00:00",
+          "halt": "pause_until_next_utc_day",
+          "reason": "daily loss 3.28% reached limit 2.00%"
+        },
+        {
+          "time": "2024-08-26 13:00:00+00:00",
+          "halt": "pause_until_next_utc_day",
+          "reason": "daily loss 2.04% reached limit 2.00%"
+        },
+        {
+          "time": "2024-08-28 05:00:00+00:00",
+          "halt": "pause_until_next_utc_day",
+          "reason": "daily loss 2.09% reached limit 2.00%"
+        },
+        {
+          "time": "2024-08-29 13:00:00+00:00",
+          "halt": "pause_until_next_utc_day",
+          "reason": "daily loss 2.37% reached limit 2.00%"
+        },
+        {
+          "time": "2024-09-02 21:00:00+00:00",
+          "halt": "pause_until_next_utc_day",
+          "reason": "daily loss 2.11% reached limit 2.00%"
+        },
+        {
+          "time": "2024-09-03 13:00:00+00:00",
+          "halt": "risk_shutdown",
+          "reason": "weekly loss 5.14% reached limit 5.00%"
+        }
+      ]
+    },
+    {
+      "fold": 8,
+      "test_start": "2024-11-14 13:00:00+00:00",
+      "test_end": "2025-02-12 13:00:00+00:00",
+      "train_signals": 1326,
+      "train_hit_rate": 0.2677,
+      "model": "hitrate",
+      "model_notes": [],
+      "trades": 18,
+      "net_return": -0.0661137293415055,
+      "max_drawdown": 0.07474822380306234,
+      "win_rate": 0.16666666666666666,
+      "expectancy_r": -0.4182438310010334,
+      "funnel": {
+        "signals": 290,
+        "entries": 18,
+        "rejected_by_nara": 11,
+        "closed": 18
+      },
+      "rejections": {
+        "nara:cluster_risk_within_limit": 10,
+        "skip:halted": 255,
+        "skip:already_in_position": 5,
+        "nara:open_risk_within_limit": 1,
+        "nara:stress_loss_within_limit": 1,
+        "nara:consecutive_losses_ok": 1
+      },
+      "halts": [
+        {
+          "time": "2024-11-15 08:00:00+00:00",
+          "halt": "pause_until_next_utc_day",
+          "reason": "daily loss 2.27% reached limit 2.00%"
+        },
+        {
+          "time": "2024-11-25 06:00:00+00:00",
+          "halt": "pause_until_next_utc_day",
+          "reason": "daily loss 2.01% reached limit 2.00%"
+        },
+        {
+          "time": "2024-11-26 03:00:00+00:00",
+          "halt": "pause_until_next_utc_day",
+          "reason": "daily loss 2.16% reached limit 2.00%"
+        },
+        {
+          "time": "2024-11-27 00:00:00+00:00",
+          "halt": "pause_after_consecutive_losses",
+          "reason": "6 losses in a row"
+        },
+        {
+          "time": "2024-11-27 04:00:00+00:00",
+          "halt": "risk_shutdown",
+          "reason": "weekly loss 5.90% reached limit 5.00%"
+        }
+      ]
+    },
+    {
+      "fold": 9,
+      "test_start": "2025-02-12 13:00:00+00:00",
+      "test_end": "2025-05-13 13:00:00+00:00",
+      "train_signals": 1325,
+      "train_hit_rate": 0.2589,
+      "model": "hitrate",
+      "model_notes": [],
+      "trades": 13,
+      "net_return": -0.05216339233317435,
+      "max_drawdown": 0.06488830500908005,
+      "win_rate": 0.15384615384615385,
+      "expectancy_r": -0.4579496996223352,
+      "funnel": {
+        "signals": 320,
+        "entries": 13,
+        "closed": 13,
+        "rejected_by_nara": 5
+      },
+      "rejections": {
+        "skip:already_in_position": 7,
+        "nara:cluster_risk_within_limit": 5,
+        "nara:open_risk_within_limit": 1,
+        "skip:halted": 294
+      },
+      "halts": [
+        {
+          "time": "2025-02-12 18:00:00+00:00",
+          "halt": "pause_until_next_utc_day",
+          "reason": "daily loss 2.50% reached limit 2.00%"
+        },
+        {
+          "time": "2025-02-18 01:00:00+00:00",
+          "halt": "pause_until_next_utc_day",
+          "reason": "daily loss 2.25% reached limit 2.00%"
+        },
+        {
+          "time": "2025-02-19 10:00:00+00:00",
+          "halt": "pause_until_next_utc_day",
+          "reason": "daily loss 2.11% reached limit 2.00%"
+        },
+        {
+          "time": "2025-02-20 00:00:00+00:00",
+          "halt": "risk_shutdown",
+          "reason": "weekly loss 6.02% reached limit 5.00%"
+        }
+      ]
+    },
+    {
+      "fold": 10,
+      "test_start": "2025-05-13 13:00:00+00:00",
+      "test_end": "2025-08-11 13:00:00+00:00",
+      "train_signals": 1322,
+      "train_hit_rate": 0.2587,
+      "model": "hitrate",
+      "model_notes": [],
+      "trades": 21,
+      "net_return": -0.031988765109702944,
+      "max_drawdown": 0.06485914912129098,
+      "win_rate": 0.23809523809523808,
+      "expectancy_r": -0.15146849992396774,
+      "funnel": {
+        "signals": 312,
+        "entries": 21,
+        "closed": 21,
+        "rejected_by_nara": 12
+      },
+      "rejections": {
+        "skip:halted": 272,
+        "skip:already_in_position": 6,
+        "nara:cluster_risk_within_limit": 11,
+        "nara:open_risk_within_limit": 3,
+        "nara:stress_loss_within_limit": 4
+      },
+      "halts": [
+        {
+          "time": "2025-05-14 11:00:00+00:00",
+          "halt": "pause_until_next_utc_day",
+          "reason": "daily loss 2.07% reached limit 2.00%"
+        },
+        {
+          "time": "2025-05-16 05:00:00+00:00",
+          "halt": "pause_until_next_utc_day",
+          "reason": "daily loss 2.05% reached limit 2.00%"
+        },
+        {
+          "time": "2025-05-20 13:00:00+00:00",
+          "halt": "pause_after_consecutive_losses",
+          "reason": "7 losses in a row"
+        },
+        {
+          "time": "2025-05-22 13:00:00+00:00",
+          "halt": "pause_until_next_utc_day",
+          "reason": "daily loss 2.02% reached limit 2.00%"
+        },
+        {
+          "time": "2025-05-27 04:00:00+00:00",
+          "halt": "pause_until_next_utc_day",
+          "reason": "daily loss 2.62% reached limit 2.00%"
+        },
+        {
+          "time": "2025-05-28 00:00:00+00:00",
+          "halt": "risk_shutdown",
+          "reason": "weekly loss 5.11% reached limit 5.00%"
+        }
+      ]
+    },
+    {
+      "fold": 11,
+      "test_start": "2025-08-11 13:00:00+00:00",
+      "test_end": "2025-11-09 13:00:00+00:00",
+      "train_signals": 1294,
+      "train_hit_rate": 0.2434,
+      "model": "hitrate",
+      "model_notes": [],
+      "trades": 20,
+      "net_return": -0.07292070311390342,
+      "max_drawdown": 0.12129463582583266,
+      "win_rate": 0.2,
+      "expectancy_r": -0.4118702093113643,
+      "funnel": {
+        "signals": 302,
+        "entries": 20,
+        "rejected_by_nara": 26,
+        "closed": 20
+      },
+      "rejections": {
+        "skip:already_in_position": 12,
+        "nara:cluster_risk_within_limit": 26,
+        "nara:stress_loss_within_limit": 6,
+        "nara:open_risk_within_limit": 3,
+        "skip:halted": 243
+      },
+      "halts": [
+        {
+          "time": "2025-08-14 03:00:00+00:00",
+          "halt": "pause_until_next_utc_day",
+          "reason": "daily loss 2.32% reached limit 2.00%"
+        },
+        {
+          "time": "2025-08-22 14:00:00+00:00",
+          "halt": "pause_until_next_utc_day",
+          "reason": "daily loss 3.96% reached limit 2.00%"
+        },
+        {
+          "time": "2025-08-26 00:00:00+00:00",
+          "halt": "pause_until_next_utc_day",
+          "reason": "daily loss 2.90% reached limit 2.00%"
+        },
+        {
+          "time": "2025-08-27 00:00:00+00:00",
+          "halt": "pause_after_consecutive_losses",
+          "reason": "7 losses in a row"
+        },
+        {
+          "time": "2025-08-27 15:00:00+00:00",
+          "halt": "risk_shutdown",
+          "reason": "drawdown 10.16% reached limit 10.00%"
+        }
+      ]
+    },
+    {
+      "fold": 12,
+      "test_start": "2025-11-09 13:00:00+00:00",
+      "test_end": "2026-02-07 13:00:00+00:00",
+      "train_signals": 1253,
+      "train_hit_rate": 0.2163,
+      "model": "hitrate",
+      "model_notes": [],
+      "trades": 28,
+      "net_return": -0.06596541755623164,
+      "max_drawdown": 0.107752914982995,
+      "win_rate": 0.21428571428571427,
+      "expectancy_r": -0.2620665112924993,
+      "funnel": {
+        "signals": 323,
+        "entries": 28,
+        "closed": 28,
+        "rejected_by_nara": 15
+      },
+      "rejections": {
+        "skip:already_in_position": 9,
+        "nara:stress_loss_within_limit": 10,
+        "nara:cluster_risk_within_limit": 7,
+        "skip:halted": 270,
+        "nara:open_risk_within_limit": 2
+      },
+      "halts": [
+        {
+          "time": "2025-11-13 18:00:00+00:00",
+          "halt": "pause_until_next_utc_day",
+          "reason": "daily loss 2.12% reached limit 2.00%"
+        },
+        {
+          "time": "2025-11-14 17:00:00+00:00",
+          "halt": "pause_until_next_utc_day",
+          "reason": "daily loss 2.06% reached limit 2.00%"
+        },
+        {
+          "time": "2025-11-17 00:00:00+00:00",
+          "halt": "pause_after_consecutive_losses",
+          "reason": "6 losses in a row"
+        },
+        {
+          "time": "2025-11-18 08:00:00+00:00",
+          "halt": "pause_until_next_utc_day",
+          "reason": "daily loss 2.14% reached limit 2.00%"
+        },
+        {
+          "time": "2025-11-20 19:00:00+00:00",
+          "halt": "pause_until_next_utc_day",
+          "reason": "daily loss 2.23% reached limit 2.00%"
+        },
+        {
+          "time": "2025-11-21 13:00:00+00:00",
+          "halt": "pause_until_next_utc_day",
+          "reason": "daily loss 2.09% reached limit 2.00%"
+        },
+        {
+          "time": "2025-11-24 08:00:00+00:00",
+          "halt": "pause_after_consecutive_losses",
+          "reason": "7 losses in a row"
+        },
+        {
+          "time": "2025-11-24 15:00:00+00:00",
+          "halt": "pause_until_next_utc_day",
+          "reason": "daily loss 2.14% reached limit 2.00%"
+        },
+        {
+          "time": "2025-11-25 13:00:00+00:00",
+          "halt": "risk_shutdown",
+          "reason": "drawdown 10.10% reached limit 10.00%"
+        }
+      ]
+    },
+    {
+      "fold": 13,
+      "test_start": "2026-02-07 13:00:00+00:00",
+      "test_end": "2026-05-08 13:00:00+00:00",
+      "train_signals": 1262,
+      "train_hit_rate": 0.2298,
+      "model": "hitrate",
+      "model_notes": [],
+      "trades": 10,
+      "net_return": -0.057062466987608085,
+      "max_drawdown": 0.07068963186184207,
+      "win_rate": 0.1,
+      "expectancy_r": -0.6654076532363418,
+      "funnel": {
+        "signals": 305,
+        "entries": 10,
+        "closed": 10,
+        "rejected_by_nara": 4
+      },
+      "rejections": {
+        "skip:already_in_position": 2,
+        "nara:cluster_risk_within_limit": 4,
+        "skip:halted": 286
+      },
+      "halts": [
+        {
+          "time": "2026-02-10 18:00:00+00:00",
+          "halt": "pause_until_next_utc_day",
+          "reason": "daily loss 2.57% reached limit 2.00%"
+        },
+        {
+          "time": "2026-02-12 06:00:00+00:00",
+          "halt": "pause_until_next_utc_day",
+          "reason": "daily loss 2.20% reached limit 2.00%"
+        },
+        {
+          "time": "2026-02-13 07:00:00+00:00",
+          "halt": "risk_shutdown",
+          "reason": "weekly loss 5.14% reached limit 5.00%"
+        }
+      ]
+    },
+    {
+      "fold": 14,
+      "test_start": "2026-05-08 13:00:00+00:00",
+      "test_end": "2026-08-06 13:00:00+00:00",
+      "train_signals": 1248,
+      "train_hit_rate": 0.2348,
+      "model": "hitrate",
+      "model_notes": [],
+      "trades": 9,
+      "net_return": -0.09207149535657622,
+      "max_drawdown": 0.09764309837175988,
+      "win_rate": 0.0,
+      "expectancy_r": -1.2181947166263034,
+      "funnel": {
+        "signals": 308,
+        "entries": 9,
+        "rejected_by_nara": 1,
+        "closed": 9
+      },
+      "rejections": {
+        "nara:stress_loss_within_limit": 1,
+        "skip:halted": 296,
+        "skip:already_in_position": 1
+      },
+      "halts": [
+        {
+          "time": "2026-05-10 21:00:00+00:00",
+          "halt": "pause_until_next_utc_day",
+          "reason": "daily loss 3.27% reached limit 2.00%"
+        },
+        {
+          "time": "2026-05-11 21:00:00+00:00",
+          "halt": "pause_until_next_utc_day",
+          "reason": "daily loss 2.30% reached limit 2.00%"
+        },
+        {
+          "time": "2026-05-12 01:00:00+00:00",
+          "halt": "pause_after_consecutive_losses",
+          "reason": "6 losses in a row"
+        },
+        {
+          "time": "2026-05-12 05:00:00+00:00",
+          "halt": "pause_until_next_utc_day",
+          "reason": "daily loss 2.16% reached limit 2.00%"
+        },
+        {
+          "time": "2026-05-13 03:00:00+00:00",
+          "halt": "risk_shutdown",
+          "reason": "weekly loss 5.53% reached limit 5.00%"
+        }
+      ]
+    },
+    {
+      "fold": 15,
+      "test_start": "2026-08-06 13:00:00+00:00",
+      "test_end": "2026-11-04 13:00:00+00:00",
+      "train_signals": 1237,
+      "train_hit_rate": 0.2296,
+      "model": "hitrate",
+      "model_notes": [],
+      "trades": 12,
+      "net_return": -0.10667378662083427,
+      "max_drawdown": 0.10667378662083427,
+      "win_rate": 0.0,
+      "expectancy_r": -1.0790514970292757,
+      "funnel": {
+        "signals": 326,
+        "entries": 12,
+        "closed": 12,
+        "rejected_by_nara": 9
+      },
+      "rejections": {
+        "nara:stress_loss_within_limit": 9,
+        "skip:already_in_position": 5,
+        "nara:cluster_risk_within_limit": 1,
+        "skip:halted": 300
+      },
+      "halts": [
+        {
+          "time": "2026-08-07 13:00:00+00:00",
+          "halt": "pause_until_next_utc_day",
+          "reason": "daily loss 2.25% reached limit 2.00%"
+        },
+        {
+          "time": "2026-08-11 07:00:00+00:00",
+          "halt": "pause_after_consecutive_losses",
+          "reason": "6 losses in a row"
+        },
+        {
+          "time": "2026-08-13 12:00:00+00:00",
+          "halt": "risk_shutdown",
+          "reason": "weekly loss 5.23% reached limit 5.00%"
+        }
+      ]
+    },
+    {
+      "fold": 16,
+      "test_start": "2026-11-04 13:00:00+00:00",
+      "test_end": "2027-02-02 13:00:00+00:00",
+      "train_signals": 1260,
+      "train_hit_rate": 0.2405,
+      "model": "hitrate",
+      "model_notes": [],
+      "trades": 14,
+      "net_return": 0.04645767221674846,
+      "max_drawdown": 0.053680645525061466,
+      "win_rate": 0.42857142857142855,
+      "expectancy_r": 0.40098258034285017,
+      "funnel": {
+        "signals": 34,
+        "entries": 14,
+        "closed": 14,
+        "rejected_by_nara": 10
+      },
+      "rejections": {
+        "skip:already_in_position": 6,
+        "nara:stress_loss_within_limit": 9,
+        "skip:halted": 3,
+        "nara:cluster_risk_within_limit": 4
+      },
+      "halts": [
+        {
+          "time": "2026-11-10 13:00:00+00:00",
+          "halt": "pause_until_next_utc_day",
+          "reason": "daily loss 2.41% reached limit 2.00%"
+        }
+      ]
+    }
+  ],
+  "raw": {
+    "trades": 281,
+    "initial_cash": 10000.0,
+    "gross_profit": 13846.757943609997,
+    "gross_loss": 20466.01814840047,
+    "net_profit": -6619.260204790477,
+    "fees": 0.0,
+    "win_rate": 0.22419928825622776,
+    "avg_win": 219.7898086287301,
+    "avg_loss": -93.88081719449758,
+    "expectancy": -23.5560861380444,
+    "expectancy_r": -0.25954464947351613,
+    "expectancy_r_ci95": [
+      -0.43079779218353675,
+      -0.0829227920490746
+    ],
+    "profit_factor": 0.6765731293310807,
+    "avg_bars_held": 24.384341637010674,
+    "exit_reasons": {
+      "stop": 216,
+      "target": 55,
+      "time": 7,
+      "end_of_data": 3
+    },
+    "risk_of_ruin_50pct_dd": 0.0,
+    "cost_share_of_gross": 0.0
+  },
+  "diagnostics": {
+    "signals": 6490,
+    "signals_per_day": 3.58,
+    "labelled_signals": 6476,
+    "label_hit_rate": 0.24027177269919703,
+    "label_mean_r_net": -0.1001202533327717,
+    "naia_rejections": {
+      "nara:cluster_risk_within_limit": 143,
+      "skip:already_in_position": 137,
+      "nara:open_risk_within_limit": 41,
+      "skip:halted": 4519,
+      "nara:stress_loss_within_limit": 61,
+      "nara:consecutive_losses_ok": 1
+    },
+    "judged_raw": true
+  }
+}

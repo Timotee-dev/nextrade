@@ -39,6 +39,8 @@ class Command(BaseCommand):
         parser.add_argument("--symbols", default=",".join(FOREX_MAJORS))
         parser.add_argument("--timeframes", default="15m,1h,4h,1d")
         parser.add_argument("--years", type=float, default=5.0, help="how far back on the first run")
+        parser.add_argument("--backfill", action="store_true",
+                            help="also fetch OLDER bars, back to --years ago, in front of what is stored")
         parser.add_argument("--suffix", default="", help="broker symbol suffix, e.g. c for EURUSDc")
         parser.add_argument("--utc-offset", type=int, default=None,
                             help="broker server time minus UTC in hours (auto-detected while the market is open)")
@@ -79,9 +81,14 @@ class Command(BaseCommand):
             for s in symbols:
                 for tf in tfs:
                     last = store.last_open_time(s, tf)
-                    start = last + tf.delta if last else tf.floor(now - timedelta(days=365 * o["years"]))
+                    wanted = tf.floor(now - timedelta(days=365 * o["years"]))
+                    start = last + tf.delta if last else wanted
                     try:
                         bars, spreads = client.rates(s, tf, start, tf.floor(now), now)
+                        first = store.first_open_time(s, tf)
+                        if o["backfill"] and first and wanted < first:
+                            old, old_sp = client.rates(s, tf, wanted, first, now)
+                            bars, spreads = old + bars, old_sp + spreads
                     except VenueError as exc:
                         self.stdout.write(self.style.ERROR(f"  {s} {tf.value}: {exc}"))
                         continue
@@ -101,6 +108,5 @@ class Command(BaseCommand):
                     self.stdout.write(f"  {s} {tf.value}: {len(bars)} new bars{span}{typical}")
         finally:
             client.close()
-        self.stdout.write(self.style.SUCCESS("Done. Forex research needs short trades and leverage; "
-                                             "those come in the next NEXTRADE batch."))
+        self.stdout.write(self.style.SUCCESS("Done. Backtest with: python manage.py run_backtest --venue mt5 ..."))
 
