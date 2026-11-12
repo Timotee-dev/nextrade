@@ -5,7 +5,8 @@
 E equity, r risk fraction, C estimated round-trip costs for the position, fx converts
 the quote currency to the account currency. After rounding: if the venue minimum
 order would push risk above E*r, the trade is REJECTED, never enlarged.
-Spot also needs the full notional in free cash.
+Spot (leverage 1) needs the full notional in free cash; a margin account (forex CFDs)
+needs notional / leverage in free margin. Shorts have the stop ABOVE the entry.
 """
 
 from __future__ import annotations
@@ -31,22 +32,27 @@ class SizeResult:
 
 def size_position(*, equity: Decimal, risk_fraction: Decimal, entry: Decimal, stop: Decimal,
                   instrument: Instrument, cost_fraction: Decimal, free_cash: Decimal,
-                  fx: Decimal = Decimal(1)) -> SizeResult:
+                  fx: Decimal = Decimal(1), sign: int = 1, leverage: Decimal = Decimal(1)) -> SizeResult:
     equity, risk_fraction, entry, stop = map(to_decimal, (equity, risk_fraction, entry, stop))
-    cost_fraction, free_cash, fx = map(to_decimal, (cost_fraction, free_cash, fx))
+    cost_fraction, free_cash, fx, leverage = map(to_decimal, (cost_fraction, free_cash, fx, leverage))
     zero = Decimal(0)
-    if entry <= stop:
-        return SizeResult(zero, zero, zero, "stop must be below entry for a long")
+    if sign * (entry - stop) <= 0:
+        return SizeResult(zero, zero, zero, "stop must be below entry for a long" if sign > 0
+                          else "stop must be above entry for a short")
+    if leverage < 1:
+        return SizeResult(zero, zero, zero, "leverage must be at least 1")
     budget = equity * risk_fraction
-    per_unit_loss = ((entry - stop) + entry * cost_fraction) * instrument.contract_size * fx
+    per_unit_loss = (abs(entry - stop) + entry * cost_fraction) * instrument.contract_size * fx
     raw = budget / per_unit_loss
     qty = instrument.normalize_qty(raw)
-    cash_cap = instrument.normalize_qty(free_cash / (entry * instrument.contract_size * fx * (1 + cost_fraction)))
+    cash_cap = instrument.normalize_qty(free_cash * leverage
+                                        / (entry * instrument.contract_size * fx * (1 + cost_fraction)))
     qty = min(qty, cash_cap)
     min_qty = instrument.min_qty_for_notional(entry)
     if qty < min_qty:
         needed = min_qty * per_unit_loss
-        reason = ("venue minimum order needs more cash than is free" if cash_cap < min_qty
+        reason = (("venue minimum order needs more margin than is free" if leverage > 1
+                   else "venue minimum order needs more cash than is free") if cash_cap < min_qty
                   else f"venue minimum order would risk {needed:.4f}, above the budget {budget:.4f}")
         return SizeResult(zero, zero, zero, reason)
     problems = instrument.order_violations(qty, instrument.normalize_price(entry))

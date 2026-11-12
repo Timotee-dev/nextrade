@@ -7,7 +7,7 @@ check the venue stop/target and NARA's mandatory exits before calling this):
   3. thesis invalidation (the strategy's own rule)
   4. time stop (max holding bars) - enforced by the caller
   5. trailing stop, if enabled: after +trail_after_r, the stop follows price at
-     trail_atr x ATR below the close, never moving down
+     trail_atr x ATR behind the close, never loosened
   6. model-based exit: not active. It runs in shadow mode only until it beats
      layers 1-5 out of sample (see compare_exit_policies).
 
@@ -62,9 +62,10 @@ def thesis(signal: Signal, *, p: float | None = None, expected_r: float | None =
 def assess(signal: Signal, strategy: Strategy, *, fill: float, current_stop: float, bars_held: int,
            bar: pd.Series, entry_regime: str | None = None, mandatory: bool = False,
            config: ExitConfig = ExitConfig()) -> Assessment:
-    risk_unit = fill - signal.stop
+    sign = signal.sign
+    risk_unit = sign * (fill - signal.stop)
     close = float(bar["close"])
-    r_now = (close - fill) / risk_unit
+    r_now = sign * (close - fill) / risk_unit
     notes: list[str] = []
     if mandatory:
         return Assessment(Health.MANDATORY_EXIT, r_now, "risk_exit")
@@ -73,8 +74,8 @@ def assess(signal: Signal, strategy: Strategy, *, fill: float, current_stop: flo
 
     new_stop = None
     if config.trail_after_r is not None and r_now >= config.trail_after_r and "atr" in bar and pd.notna(bar["atr"]):
-        trail = close - config.trail_atr * float(bar["atr"])
-        if trail > current_stop:
+        trail = close - sign * config.trail_atr * float(bar["atr"])
+        if sign * (trail - current_stop) > 0:
             new_stop = trail
             notes.append(f"trailing stop raised to {trail:.6g}")
 
@@ -101,7 +102,7 @@ def make_exit_policy(strategies: dict[str, Strategy], config: ExitConfig = ExitC
         strat = strategies[position.signal.strategy]
         a = assess(position.signal, strat, fill=float(position.fill), current_stop=position.stop,
                    bars_held=position.bars_held, bar=bar, config=config)
-        if a.new_stop is not None and a.new_stop > position.stop:
+        if a.new_stop is not None and position.signal.sign * (a.new_stop - position.stop) > 0:
             position.stop = a.new_stop
         return a.exit_reason
     return policy

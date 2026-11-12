@@ -2,6 +2,27 @@
 
 Newest first.
 
+## 2026-11-12 · Forex F1 data loaded; F2 shorts, leverage, conversion; F3 pre-registered
+
+**Data (operator's run)**: Exness demo 477738622 (Exness-MT5Trial9), 15 USD, 1:200, server
+clock UTC+0. 8 majors: 1h/4h/1d from 2021-11, 15m from 2022-10 (100,000-bar terminal limit).
+Median bar spreads 0.65-2.9 bps (Quidax: 13-58).
+
+**F2 built**: shorts through costs (fills move against the trade on both sides), labels,
+sizing (stop above entry), NARA (signed risk, contract size, conversion), NPEI trailing (never
+loosened), stress (forex shock 1%, both directions) and the backtester (margin account: only
+P&L and fees move cash, notional/leverage locked as margin; JPY/CHF/CAD profits converted at
+the latest USD-pair close). Spot crypto accounting unchanged and refuses shorts.
+MT5 costs: no commission, measured bar spread x2, 0.5 bps slippage per side; spread limit 8 bps.
+**Found**: at 15 USD a 0.01 lot with a 15-pip stop risks 1.50 USD = 10% (1% needs about
+150 USD, or a cent-size contract). With 15-pip stops at 1% risk, the stress limit allows
+about 2-3 forex positions at once.
+
+**F3**: ADR 0007 pre-registers FX1 fx_trend (1h), FX2 fx_meanrev (1h), FX3 fx_london (15m),
+two-sided, exits by stop/target/time only, judged on raw trades, and a new gate rule: positive
+in both halves of the test period. Random baseline draws direction too.
+Not modelled yet: swap (overnight financing). **Tests**: 421 passing.
+
 ## 2026-11-12 · Forex batch F1: direct MT5 history download
 
 Decision (operator): forex through MetaTrader 5. Gaps found before any forex test: the system

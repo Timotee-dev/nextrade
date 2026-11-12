@@ -40,6 +40,9 @@ class TradeProposal:
     asset_class: str = "crypto"
     beta: Decimal = Decimal(1)
     spread_bps: Decimal | None = None
+    sign: int = 1                       # +1 long, -1 short
+    fx: Decimal = Decimal(1)            # account currency per unit of quote currency
+    leverage: Decimal = Decimal(1)      # 1 = spot (full notional in cash)
 
 
 @dataclass(frozen=True)
@@ -90,7 +93,8 @@ class RiskEngine:
 
         size: SizeResult = size_position(
             equity=snap.equity, risk_fraction=L.risk_per_trade, entry=proposal.entry, stop=proposal.stop,
-            instrument=instrument, cost_fraction=proposal.cost_fraction, free_cash=snap.free_cash)
+            instrument=instrument, cost_fraction=proposal.cost_fraction, free_cash=snap.free_cash,
+            fx=proposal.fx, sign=proposal.sign, leverage=proposal.leverage)
         rule("size_valid", size.ok, size.reject_reason or f"qty {size.qty}")
         budget = snap.equity * L.risk_per_trade
         rule("trade_risk_within_limit", size.ok and size.risk_amount <= budget,
@@ -100,7 +104,8 @@ class RiskEngine:
                  f"cap {L.max_capital_at_risk}")
 
         new_pos = OpenPosition(proposal.symbol, size.qty, proposal.entry, proposal.stop, proposal.entry,
-                               proposal.asset_class, proposal.beta)
+                               proposal.asset_class, proposal.beta, proposal.sign,
+                               instrument.contract_size, proposal.fx)
         after = snap.positions + ((new_pos,) if size.ok else ())
         total = open_risk(after, L.gap_allowance)
         rule("open_risk_within_limit", total <= snap.equity * L.max_open_risk,

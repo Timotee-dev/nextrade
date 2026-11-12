@@ -17,14 +17,22 @@ class OpenPosition:
     price: Decimal               # latest mark
     asset_class: str = "crypto"
     beta: Decimal = Decimal(1)   # move relative to the market shock (BTC = 1)
+    sign: int = 1                # +1 long, -1 short
+    contract: Decimal = Decimal(1)   # units per lot (forex: 100,000 or 1,000)
+    fx: Decimal = Decimal(1)         # account currency per unit of quote currency
+
+    @property
+    def units(self) -> Decimal:
+        return self.qty * self.contract * self.fx
 
     @property
     def risk_to_stop(self) -> Decimal:
-        return max(Decimal(0), (self.price - self.stop) * self.qty)
+        return max(Decimal(0), self.sign * (self.price - self.stop) * self.units)
 
     @property
     def value(self) -> Decimal:
-        return self.price * self.qty
+        """Notional in the account currency."""
+        return self.price * self.units
 
 
 @dataclass(frozen=True)
@@ -65,16 +73,24 @@ class StressScenario:
     market_shock: Decimal = Decimal("0.10")     # BTC -10%
     exit_slippage: Decimal = Decimal("0.005")   # stops fill 0.5% worse
     floor_same_class_corr: Decimal = Decimal("0.8")
+    # Forex majors move far less: a 1% adverse gap (a weekend or a central-bank surprise)
+    # through every stop at once. Rare events are larger (CHF, January 2015); see ADR 0007.
+    forex_shock: Decimal = Decimal("0.01")
+    forex_exit_slippage: Decimal = Decimal("0.0005")
 
 
 def stress_loss(positions, scenario: StressScenario = StressScenario()) -> Decimal:
-    """Assume every position in the shocked class falls together (correlation goes to 1 in a
-    crash). Each exits at the worse of its stop and the shocked price, minus slippage."""
+    """Assume every position moves against itself at once (correlation goes to 1 in a crash).
+    Each exits at the worse of its stop and the shocked price, minus slippage."""
     total = Decimal(0)
     for p in positions:
-        shocked = p.price * (1 - scenario.market_shock * p.beta)
-        exit_px = min(p.stop, shocked) * (1 - scenario.exit_slippage)
-        total += max(Decimal(0), (p.price - exit_px) * p.qty)
+        fx_pos = p.asset_class == "forex"
+        shock = scenario.forex_shock if fx_pos else scenario.market_shock * p.beta
+        slip = scenario.forex_exit_slippage if fx_pos else scenario.exit_slippage
+        shocked = p.price * (1 - p.sign * shock)
+        worse = min(p.stop, shocked) if p.sign > 0 else max(p.stop, shocked)
+        exit_px = worse * (1 - p.sign * slip)
+        total += max(Decimal(0), p.sign * (p.price - exit_px) * p.units)
     return total
 
 

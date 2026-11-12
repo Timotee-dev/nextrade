@@ -33,7 +33,7 @@ class RiskLimits:
 
 # Spreads routinely seen per venue (bps). Quidax NGN books showed 18-50 bps on 2026-11-11, so the
 # Binance-calibrated 15 bps limit would block every Quidax trade.
-VENUE_MAX_SPREAD_BPS = {"binance": Decimal("15"), "quidax": Decimal("60")}
+VENUE_MAX_SPREAD_BPS = {"binance": Decimal("15"), "quidax": Decimal("60"), "mt5": Decimal("8")}
 
 
 def scaled_limits(risk_per_trade: Decimal, venue: str = "binance", base: RiskLimits | None = None) -> RiskLimits:

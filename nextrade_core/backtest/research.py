@@ -43,6 +43,7 @@ class ResearchConfig:
     min_trades: int = 100
     scoring: ScoringConfig = field(default_factory=ScoringConfig)
     expanding: bool = False        # train on ALL earlier data (for rare signals, e.g. daily bars)
+    leverage: Decimal = Decimal(1)  # margin accounts (forex); ignored for spot crypto
     min_train_signals: int = 30
 
 
@@ -100,16 +101,16 @@ def evaluate_strategy(strategy: Strategy, frames: dict[str, pd.DataFrame], instr
             scorer = lambda s, n=naia: n.evaluate(s, MarketContext())  # noqa: E731
             test_frames = {sym: f[(f.index >= fold.test_start - pd.Timedelta(days=0)) & (f.index < fold.test_end)]
                            for sym, f in frames.items()}
-            bt = Backtester(test_frames, instruments, costs, risk, cfg.initial_cash,
+            bt = Backtester(test_frames, instruments, costs, risk, cfg.initial_cash, leverage=cfg.leverage,
                             scorer=None if judged_raw else scorer, exit_policy=exit_policy)
             res = bt.run(_signals_in(signals, fold.test_start, fold.test_end))
-            raw_res = Backtester(test_frames, instruments, costs, risk, cfg.initial_cash, exit_policy=exit_policy).run(
+            raw_res = Backtester(test_frames, instruments, costs, risk, cfg.initial_cash, leverage=cfg.leverage, exit_policy=exit_policy).run(
                 _signals_in(signals, fold.test_start, fold.test_end))
             if len(raw_res.trades):
                 raw_trades.append(raw_res.trades.assign(fold=fold.number))
             for k, v in res.rejections.items():
                 rejections_total[k] = rejections_total.get(k, 0) + v
-            base_bt = Backtester(test_frames, instruments, costs, risk, cfg.initial_cash, exit_policy=exit_policy)
+            base_bt = Backtester(test_frames, instruments, costs, risk, cfg.initial_cash, leverage=cfg.leverage, exit_policy=exit_policy)
             base_res = base_bt.run(_signals_in(base_signals, fold.test_start, fold.test_end))
             if len(res.trades):
                 oos_trades.append(res.trades.assign(fold=fold.number))
@@ -126,7 +127,8 @@ def evaluate_strategy(strategy: Strategy, frames: dict[str, pd.DataFrame], instr
     btrades = pd.concat(base_trades, ignore_index=True) if base_trades else pd.DataFrame()
     summary = _pooled_summary(trades, cfg)
     base_summary = _pooled_summary(btrades, cfg)
-    gate = decision_gate(trades, btrades, cfg.min_trades)
+    gate = decision_gate(trades, btrades, cfg.min_trades,
+                         stable_halves=getattr(strategy, "require_stable_halves", False))
     rtrades = pd.concat(raw_trades, ignore_index=True) if raw_trades else pd.DataFrame()
     labelled = ds if len(ds) else None
     diagnostics = {
@@ -159,7 +161,8 @@ def _pooled_summary(trades: pd.DataFrame, cfg: ResearchConfig) -> dict:
     return out
 
 
-def decision_gate(trades: pd.DataFrame, baseline: pd.DataFrame, min_trades: int = 100) -> dict:
+def decision_gate(trades: pd.DataFrame, baseline: pd.DataFrame, min_trades: int = 100,
+                  stable_halves: bool = False) -> dict:
     reasons = []
     n = len(trades)
     mean_r = float(trades["r_net"].mean()) if n else None
@@ -171,8 +174,14 @@ def decision_gate(trades: pd.DataFrame, baseline: pd.DataFrame, min_trades: int 
         reasons.append("95% interval of mean net R does not lie above zero")
     if mean_r is None or base_r is None or mean_r <= base_r:
         reasons.append("does not beat the random-entry baseline")
+    halves = None
+    if stable_halves and n >= 2:
+        ordered = trades.sort_values("exit_time")["r_net"].to_numpy()
+        halves = (float(ordered[: n // 2].mean()), float(ordered[n // 2:].mean()))
+        if min(halves) <= 0:
+            reasons.append(f"not positive in both halves of the test period ({halves[0]:+.3f}, {halves[1]:+.3f})")
     return {"pass": not reasons, "reasons": reasons, "trades": n, "mean_r": mean_r, "mean_r_ci95": ci,
-            "baseline_mean_r": base_r}
+            "baseline_mean_r": base_r, "halves_mean_r": halves}
 
 
 def _tf(frame: pd.DataFrame):

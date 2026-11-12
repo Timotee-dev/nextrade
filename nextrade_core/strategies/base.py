@@ -61,6 +61,11 @@ class Signal:
         return self.bar_time + self.timeframe.delta
 
     @property
+    def sign(self) -> int:
+        """+1 for a long, -1 for a short: profit = sign * (exit - entry)."""
+        return 1 if self.side is Side.LONG else -1
+
+    @property
     def risk_per_unit(self) -> float:
         return abs(self.entry - self.stop)
 
@@ -95,7 +100,8 @@ class Strategy(ABC):
 
     @abstractmethod
     def _plan(self, f: pd.DataFrame) -> pd.DataFrame:
-        """Columns: entry_ok, stop, target, max_hold, invalidation_level (one row per bar)."""
+        """Columns: entry_ok, stop, target, max_hold, invalidation_level (one row per bar).
+        Optional column `short` (bool): that row's trade is a short; otherwise self.side applies."""
 
     @abstractmethod
     def invalidation_rule(self) -> str: ...
@@ -123,15 +129,21 @@ class Strategy(ABC):
         for flt in self.filters:
             ok &= flt.mask(f, f).fillna(False).astype(bool)
         close = f["close"]
-        if self.side is Side.LONG:
-            ok &= (plan["stop"] < close) & (close < plan["target"])
-        else:
-            ok &= (plan["target"] < close) & (close < plan["stop"])
+        short = self._short_mask(plan)
+        long_ok = (plan["stop"] < close) & (close < plan["target"])
+        short_ok = (plan["target"] < close) & (close < plan["stop"])
+        ok &= (long_ok & ~short) | (short_ok & short)
         return ok
+
+    def _short_mask(self, plan: pd.DataFrame) -> pd.Series:
+        if "short" in plan.columns:
+            return plan["short"].fillna(False).astype(bool)
+        return pd.Series(self.side is Side.SHORT, index=plan.index)
 
     def generate(self, f: pd.DataFrame, symbol: str, timeframe: Timeframe) -> list[Signal]:
         plan = self._plan(f)
         ok = self.entry_mask(f, plan).to_numpy()
+        short = self._short_mask(plan).to_numpy()
         cooldown = int(getattr(self.params, "cooldown_bars", 0))
         version, rule = self.version, self.invalidation_rule()
         model_cols = [c for c in MODEL_COLUMNS if c in f.columns]
@@ -145,7 +157,7 @@ class Strategy(ABC):
             inv = p.get("invalidation_level")
             out.append(Signal(
                 strategy=self.code, strategy_version=version, symbol=symbol, timeframe=timeframe,
-                bar_time=ts.to_pydatetime(), side=self.side, entry=float(row["close"]),
+                bar_time=ts.to_pydatetime(), side=Side.SHORT if short[i] else Side.LONG, entry=float(row["close"]),
                 stop=float(p["stop"]), target=float(p["target"]), max_hold_bars=int(p["max_hold"]),
                 invalidation=rule, invalidation_level=None if inv is None or pd.isna(inv) else float(inv),
                 features={c: float(row[c]) for c in model_cols if pd.notna(row[c])},

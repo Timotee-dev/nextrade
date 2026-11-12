@@ -51,38 +51,43 @@ class Outcome:
 
 
 def simulate_exit(frame: pd.DataFrame, signal: Signal, costs: CostModel) -> Outcome | None:
+    """Longs and shorts: `sg` is +1 for a long, -1 for a short, so `sg * (a - b) > 0` means
+    a is better than b for the trade. A short's stop is touched by the bar's HIGH."""
     idx = frame.index.get_indexer([pd.Timestamp(signal.bar_time)])[0]
     if idx < 0 or idx + 1 >= len(frame):
         return None
     o, h, l, c = (frame[k].to_numpy() for k in ("open", "high", "low", "close"))
+    sg = signal.sign
+    adverse, favour = (l, h) if sg > 0 else (h, l)
     e = idx + 1
-    fill = costs.entry_fill(signal.symbol, o[e])
-    if fill <= signal.stop or o[e] >= signal.target:
+    fill = costs.entry_fill(signal.symbol, o[e], sign=sg)
+    if sg * (fill - signal.stop) <= 0 or sg * (o[e] - signal.target) >= 0:
         return None
-    risk = fill - signal.stop
+    risk = sg * (fill - signal.stop)
     last = e + signal.max_hold_bars - 1
     available_last = min(last, len(frame) - 1)
+    worse_of = min if sg > 0 else max
 
     best = worst = 0.0
     for j in range(e, available_last + 1):
-        worst = min(worst, (l[j] - fill) / risk)
-        if l[j] <= signal.stop:
-            mid = min(signal.stop, o[j]) if j > e else signal.stop
-            px, reason = costs.exit_fill(signal.symbol, mid), ExitReason.STOP
+        worst = min(worst, sg * (adverse[j] - fill) / risk)
+        if sg * (adverse[j] - signal.stop) <= 0:
+            mid = worse_of(signal.stop, o[j]) if j > e else signal.stop
+            px, reason = costs.exit_fill(signal.symbol, mid, sign=sg), ExitReason.STOP
             break
-        best = max(best, (h[j] - fill) / risk)
-        if h[j] >= signal.target:
-            px, reason = costs.exit_fill(signal.symbol, signal.target, slippage=False), ExitReason.TARGET
+        best = max(best, sg * (favour[j] - fill) / risk)
+        if sg * (favour[j] - signal.target) >= 0:
+            px, reason = costs.exit_fill(signal.symbol, signal.target, slippage=False, sign=sg), ExitReason.TARGET
             break
     else:
         if last >= len(frame):
             return None  # unresolved: neither barrier hit and the time limit lies past the data
-        j, px, reason = last, costs.exit_fill(signal.symbol, c[last]), ExitReason.TIME
+        j, px, reason = last, costs.exit_fill(signal.symbol, c[last], sign=sg), ExitReason.TIME
 
     fees = costs.fees(fill) + costs.fees(px)
-    r_gross = (px - fill) / risk
-    r_net = (px - fill - fees) / risk
-    ideal = (_mid_exit(reason, signal, o, c, j, e) - o[e]) / risk
+    r_gross = sg * (px - fill) / risk
+    r_net = (sg * (px - fill) - fees) / risk
+    ideal = sg * (_mid_exit(reason, signal, o, c, j, e) - o[e]) / risk
     return Outcome(
         entry_time=frame.index[e].to_pydatetime(), exit_time=frame.index[j].to_pydatetime(),
         fill=float(fill), exit_price=float(px), reason=reason, bars_held=j - e + 1,
@@ -95,5 +100,6 @@ def _mid_exit(reason: ExitReason, s: Signal, o: np.ndarray, c: np.ndarray, j: in
     if reason is ExitReason.TARGET:
         return s.target
     if reason is ExitReason.STOP:
-        return min(s.stop, o[j]) if j > e else s.stop
+        worse_of = min if s.sign > 0 else max
+        return worse_of(s.stop, o[j]) if j > e else s.stop
     return c[j]

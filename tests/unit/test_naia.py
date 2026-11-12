@@ -60,8 +60,20 @@ def test_cost_model():
     assert c.exit_fill("BTCUSDT", 100.0, slippage=False) == pytest.approx(100 * (1 - 0.0002))
     assert c.round_trip_fraction("DOGEUSDT") == pytest.approx(0.002 + 0.001 + 0.0002)
     assert c.cost_in_r("BTCUSDT", 100.0, 99.0) == pytest.approx((0.002 + 0.0004 + 0.0002) * 100 / 1)
+    assert c.cost_in_r("BTCUSDT", 100.0, 101.0) == pytest.approx(c.cost_in_r("BTCUSDT", 100.0, 99.0))  # short
     with pytest.raises(ValueError):
-        c.cost_in_r("BTCUSDT", 100.0, 101.0)
+        c.cost_in_r("BTCUSDT", 100.0, 100.0)
+    # a short sells below mid and buys back above it: costs always work against the trade
+    assert c.entry_fill("BTCUSDT", 100.0, sign=-1) == pytest.approx(100 * (1 - 0.0002 - 0.0001))
+    assert c.exit_fill("BTCUSDT", 100.0, sign=-1) == pytest.approx(100 * (1 + 0.0002 + 0.0001))
+
+
+def test_mt5_costs_double_the_measured_bar_spread():
+    from nextrade_core.costs.model import cost_model_for
+    c = cost_model_for("mt5", {"EURUSD": 0.76})
+    assert c.fee_rate == 0 and c.spread("EURUSD") == pytest.approx(1.52e-4)
+    assert c.spread("GBPUSD") == pytest.approx(2e-4)                 # default when unmeasured
+    assert cost_model_for("quidax", {"ETHUSDT": 20}).spread("ETHUSDT") == pytest.approx(20e-4)
 
 
 # ------------------------------------------------------------------ labels

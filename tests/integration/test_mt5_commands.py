@@ -67,3 +67,23 @@ def test_real_account_warning(monkeypatch, capsys):
     monkeypatch.setattr(cmd, "make_mt5", lambda **kw: MT5Local(f, **kw))
     call_command("load_mt5_history", symbols="EURUSD", timeframes="1d", years=0.05, suffix="c")
     assert "REAL account" in capsys.readouterr().out
+
+
+def test_run_backtest_on_mt5_forex_data(fake, capsys):
+    call_command("load_mt5_history", symbols="EURUSD,USDJPY", timeframes="1h", years=0.25, suffix="c")
+    capsys.readouterr()
+    call_command("run_backtest", venue="mt5", timeframe="1h", strategies="breakout",
+                 train_days=20, test_days=10, min_trades=1, expanding=True, risk_per_trade="0.01")
+    out = capsys.readouterr().out
+    assert "Forex margin account: 10000 USD at 1:200" in out
+    assert "spread 2 bps default" in out and "'EURUSD': 2.18" in out and "(measured x2)" in out
+    assert "decision gate:" in out
+
+
+def test_run_backtest_forex_strategy_two_sided(fake, capsys):
+    call_command("load_mt5_history", symbols="EURUSD,USDJPY", timeframes="1h", years=0.25, suffix="c")
+    capsys.readouterr()
+    call_command("run_backtest", venue="mt5", timeframe="1h", strategies="fx_trend,fx_meanrev",
+                 train_days=20, test_days=10, min_trades=1, risk_per_trade="0.01")
+    out = capsys.readouterr().out
+    assert out.count("decision gate:") == 2 and "judged on raw trades" in out

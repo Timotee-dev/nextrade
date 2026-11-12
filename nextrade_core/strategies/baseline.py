@@ -83,6 +83,18 @@ class RandomEntry(Strategy):
         if self.template is not None:
             plan = self.template._plan(f).copy()
             plan["entry_ok"] = draw
+            if "short" in plan.columns:
+                # Two-sided template: the direction is part of the strategy's claim, so the
+                # baseline draws it at random too, keeping the template's stop and target distances.
+                close = f["close"]
+                d_stop, d_tgt = (plan["stop"] - close).abs(), (plan["target"] - close).abs()
+                short = pd.Series(bar_uniforms(f.index, p.seed + 1, self._salt + ":side") < 0.5, index=f.index)
+                sgn = np.where(short, -1.0, 1.0)
+                plan["short"] = short
+                plan["stop"] = close - sgn * d_stop
+                plan["target"] = close + sgn * d_tgt
+                if "invalidation_level" in plan.columns:
+                    plan["invalidation_level"] = np.nan
             return plan
         close, atr = f["close"], f["atr"]
         stop = close - p.stop_atr * atr

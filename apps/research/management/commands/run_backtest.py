@@ -36,9 +36,9 @@ class Command(BaseCommand):
     help = "Walk-forward backtest with costs, baselines and the go/no-go decision gate."
 
     def add_arguments(self, parser):
-        parser.add_argument("--venue", default=settings.NEXTRADE["VENUE"], choices=["quidax", "binance", "gate"],
+        parser.add_argument("--venue", default=settings.NEXTRADE["VENUE"], choices=["quidax", "binance", "gate", "mt5"],
                             help="where the price history comes from")
-        parser.add_argument("--costs", default=None, choices=["quidax", "binance"],
+        parser.add_argument("--costs", default=None, choices=["quidax", "binance", "mt5"],
                             help="whose fees and spreads to charge (default: quidax for gate data, else the venue)")
         parser.add_argument("--ngn-per-usdt", default=None,
                             help="rate for Quidax-cost research on USDT data (default: latest stored USDT/NGN, else 1400)")
@@ -53,6 +53,8 @@ class Command(BaseCommand):
         parser.add_argument("--capital", default=None,
                             help="starting cash per fold in the quote currency (default: 20000 NGN on quidax, 1000 USDT on binance)")
         parser.add_argument("--min-trades", type=int, default=100)
+        parser.add_argument("--leverage", default="200",
+                            help="margin accounts (mt5 forex): account leverage, e.g. 200 for 1:200")
         parser.add_argument("--expanding", action="store_true",
                             help="each test window trains on ALL earlier data (use for rare daily signals)")
         parser.add_argument("--risk-per-trade", default=None,
@@ -67,7 +69,7 @@ class Command(BaseCommand):
         venue = o["venue"]
         cost_venue = o["costs"] or ("quidax" if venue == "gate" else venue)
         proxy = venue != cost_venue == "quidax"      # e.g. Gate.io prices, Quidax costs
-        capital = o["capital"] or ("20000" if venue == "quidax" else "1000")
+        capital = o["capital"] or {"quidax": "20000", "mt5": "10000"}.get(venue, "1000")
         qs = Instrument.objects.filter(venue=venue)
         if o["symbols"]:
             qs = qs.filter(symbol__in=[s.strip().upper() for s in o["symbols"].split(",")])
@@ -89,6 +91,8 @@ class Command(BaseCommand):
             raise CommandError("Not enough bars for features. Load more history.")
         domain = {s: instruments[s].to_domain() for s in frames}
         quotes_by_ccy = {i.quote for i in instruments.values() if i.symbol in frames}
+        if venue == "mt5":
+            quotes_by_ccy = {"USD"}            # forex profits are converted to USD inside the backtester
         if len(quotes_by_ccy) > 1 and not o["symbols"]:
             home = "NGN" if venue == "quidax" else "USDT"
             frames = {s: f for s, f in frames.items() if instruments[s].quote == home}
@@ -113,15 +117,22 @@ class Command(BaseCommand):
                               f"minimum order {min_usdt} USDT")
         cfg = ResearchConfig(train=pd.Timedelta(days=o["train_days"]), test=pd.Timedelta(days=o["test_days"]),
                              model_kind=o["model"], initial_cash=Decimal(capital), min_trades=o["min_trades"],
-                             expanding=o["expanding"])
+                             expanding=o["expanding"], leverage=Decimal(o["leverage"]))
         limits = scaled_limits(Decimal(o["risk_per_trade"]) if o["risk_per_trade"] else RiskLimits().risk_per_trade,
                                cost_venue)
         costs, risk = cost_model_for(cost_venue, spreads), RiskEngine(limits)
         self.stdout.write(f"Risk: {limits.risk_per_trade:.2%} per trade, open risk {limits.max_open_risk:.1%}, "
                           f"cluster {limits.max_cluster_risk:.1%}, stress {limits.max_stress_loss:.0%}, "
                           f"daily loss {limits.daily_loss:.0%}, drawdown stop {limits.max_drawdown:.0%}")
-        self.stdout.write(f"Costs: fee {costs.fee_rate:.2%}/side, spread {costs.spread_bps:.0f} bps default"
-                          + (f", measured {spreads}" if spreads else " (no recorded spreads yet)"))
+        charged = {k: round(v, 2) for k, v in costs.spread_bps_by_symbol.items()}
+        self.stdout.write(f"Costs: fee {costs.fee_rate:.2%}/side, spread {costs.spread_bps:.0f} bps default, "
+                          f"slippage {costs.slippage_bps} bps/side"
+                          + (f", charged spreads {charged}" if charged else " (no recorded spreads yet)")
+                          + (" (measured x2)" if charged and charged != spreads else ""))
+        if venue == "mt5":
+            self.stdout.write(f"Forex margin account: {capital} USD at 1:{o['leverage']}; longs and shorts; "
+                              "results in R (multiples of the amount risked), so the edge does not depend on "
+                              "account size. Measured bar spreads are doubled.")
         out_dir = Path(settings.BASE_DIR) / "research" / "experiments"
 
         if o["sweep"]:
@@ -169,6 +180,10 @@ class Command(BaseCommand):
                                   f"fees/gross profit: {s.get('cost_share_of_gross')}")
             if b.get("trades"):
                 self.stdout.write(f"  random-entry baseline: {b['trades']} trades, mean net R {b['expectancy_r']:+.3f}")
+            if g.get("halves_mean_r"):
+                h1, h2 = g["halves_mean_r"]
+                self.stdout.write(f"  first half of test period: {h1:+.3f} R   second half: {h2:+.3f} R")
+
             verdict = self.style.SUCCESS("PASS") if g["pass"] else self.style.ERROR("FAIL")
             self.stdout.write(f"  decision gate: {verdict}")
             for reason in g["reasons"]:
