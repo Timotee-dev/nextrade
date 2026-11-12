@@ -186,7 +186,12 @@ def decision_gate(trades: pd.DataFrame, baseline: pd.DataFrame, min_trades: int 
 
 def _tf(frame: pd.DataFrame):
     from nextrade_core.data.candles import Timeframe
-    step = (frame.index[1] - frame.index[0]) if len(frame) > 1 else pd.Timedelta(minutes=1)
+    # The most common bar spacing: forex has weekend and holiday gaps, so the first two bars
+    # can be days apart (a Sunday-evening bar followed by Monday's).
+    if len(frame) > 1:
+        step = pd.Series(frame.index[1:] - frame.index[:-1]).mode().iloc[0]
+    else:
+        step = pd.Timedelta(minutes=1)
     for tf in Timeframe:
         if tf.delta == step:
             return tf

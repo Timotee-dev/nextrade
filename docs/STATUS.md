@@ -22,7 +22,7 @@ Last updated: 2026-11-11 (T1 passed; Quidax paper trading)
 | Forex | F1 data, F2 shorts/margin/conversion, F3 FX1-FX3 pre-registered (ADR 0007) | Built; tests to run; F4 paper next |
 | Capacity | 100 trades/day per market | Not yet load-tested |
 
-Tests: 421 passing, 94% line coverage. Phases 4-13 were first built in an earlier
+Tests: 422 passing, 94% line coverage. Phases 4-13 were first built in an earlier
 session whose log entries were lost; see the DEVLOG recovery note.
 
 ## Open items for the operator

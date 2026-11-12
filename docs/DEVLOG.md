@@ -2,6 +2,14 @@
 
 Newest first.
 
+## 2026-11-12 · Fix: timeframe guessed from a weekend gap
+
+The operator's first forex run crashed: the timeframe was inferred from the first two bars,
+and Exness 1h data starts with a Sunday 22:00 bar followed by a gap. Now the most common bar
+spacing is used. Also: the test suite wrote experiment records into the real
+research/experiments folder (13 test files reached the repository); every database test now
+writes into a temporary folder, and those files are removed. **Tests**: 422 passing.
+
 ## 2026-11-12 · Forex F1 data loaded; F2 shorts, leverage, conversion; F3 pre-registered
 
 **Data (operator's run)**: Exness demo 477738622 (Exness-MT5Trial9), 15 USD, 1:200, server

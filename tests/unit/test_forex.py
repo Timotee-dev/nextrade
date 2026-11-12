@@ -207,3 +207,10 @@ def test_gate_requires_both_halves_positive():
     g = decision_gate(t, b, min_trades=100, stable_halves=True)
     assert not g["pass"] and "both halves" in g["reasons"][-1] and g["halves_mean_r"] == pytest.approx((1.0, -0.2))
     assert decision_gate(t, b, min_trades=100)["pass"]                  # old rule alone would pass
+
+
+def test_timeframe_inferred_despite_weekend_gap_at_the_start():
+    from nextrade_core.backtest.research import _tf
+    idx = pd.DatetimeIndex([pd.Timestamp("2021-11-14 22:00", tz="UTC")]
+                           + list(pd.date_range("2021-11-15 20:00", periods=50, freq="1h", tz="UTC")))
+    assert _tf(pd.DataFrame({"close": 1.0}, index=idx)) is Timeframe.H1
