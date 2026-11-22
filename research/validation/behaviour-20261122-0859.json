@@ -1,0 +1,107 @@
+{
+  "synthetic": false,
+  "symbols": [
+    "AAVEUSDT",
+    "ASTERUSDT",
+    "BNBUSDT",
+    "BTCUSDT",
+    "CAPUSDT",
+    "DOGEUSDT",
+    "ELSAUSDT",
+    "ENAUSDT",
+    "ETHUSDT",
+    "GRAMUSDT",
+    "HYPEUSDT",
+    "INJUSDT",
+    "LINKUSDT",
+    "LITUSDT",
+    "LTCUSDT",
+    "MNTUSDT",
+    "MONUSDT",
+    "NEARUSDT",
+    "PEPEUSDT",
+    "PIEVERSEUSDT",
+    "PUMPUSDT",
+    "RLUSDUSDT",
+    "SOLUSDT",
+    "SUIUSDT",
+    "UNIUSDT",
+    "USD1USDT",
+    "USDYUSDT",
+    "VVVUSDT",
+    "WLDUSDT",
+    "XAUTUSDT",
+    "XRPUSDT",
+    "ZROUSDT"
+  ],
+  "timeframe": "5m",
+  "strategies": [
+    "scalp_momentum",
+    "scalp_trend",
+    "scalp_meanrev",
+    "scalp_breakout",
+    "scalp_vol"
+  ],
+  "checks": [
+    {
+      "check": "multiple simultaneous positions on different instruments",
+      "result": "not_demonstrated",
+      "evidence": "peak 1 open at once, mean 0.07, 18 symbols traded"
+    },
+    {
+      "check": "automatic profit-taking at the target",
+      "result": "pass",
+      "evidence": "17 trades closed at target, 17 of them net positive after costs"
+    },
+    {
+      "check": "automatic closure by stop, target or time limit",
+      "result": "pass",
+      "evidence": "closed by {'stop': 41, 'target': 17, 'time': 2}"
+    },
+    {
+      "check": "every entry uses a fresh signal (no signal reused)",
+      "result": "pass",
+      "evidence": "0 reused signal ids, 0 entries not newer than the previous trade's signal, 60 trades"
+    },
+    {
+      "check": "re-entry after closing, never while still open",
+      "result": "pass",
+      "evidence": "42 re-entries on a symbol, 0 opened before the earlier trade closed"
+    },
+    {
+      "check": "re-entry respects the cooldown",
+      "result": "pass",
+      "evidence": "shortest wait between a close and the next entry on a symbol: 25 min (cooldown 15 min); 145 entries blocked by the guard, 10 signals skipped because a position was already open"
+    },
+    {
+      "check": "new positions opened while others are still open",
+      "result": "not_demonstrated",
+      "evidence": "0 of 60 entries happened while another position was open"
+    },
+    {
+      "check": "scans many markets continuously",
+      "result": "fail",
+      "evidence": "signals on 32 symbols; entries on 10 of ~17 days (per day min 1, median 6, max 12); longest quiet spell 22.1 h"
+    },
+    {
+      "check": "re-entry guard used by the backtester",
+      "result": "pass",
+      "evidence": "Backtester(reentry=...) is checked on entry and updated on close"
+    },
+    {
+      "check": "re-entry guard used by the trader loop",
+      "result": "pass",
+      "evidence": "TradingDaemon(reentry=...) is checked per signal and updated on close"
+    },
+    {
+      "check": "net-profit exit (should_take_profit) used by the backtester",
+      "result": "fail",
+      "evidence": "exits are fixed stop/target/time only"
+    },
+    {
+      "check": "net-profit exit (should_take_profit) used by the trader loop",
+      "result": "fail",
+      "evidence": "exits are venue stop/target orders and a time stop"
+    }
+  ]
+}

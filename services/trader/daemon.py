@@ -42,6 +42,7 @@ from nextrade_core.nara.portfolio import OpenPosition, PortfolioSnapshot, open_r
 from nextrade_core.nctpi.allocation import Candidate, Funnel, allocate
 from nextrade_core.npei.exits import ExitConfig, assess, thesis
 from nextrade_core.regime.classifier import classify
+from nextrade_core.scalping.net_exit import NetExitConfig, NetProfitExit, entry_gate
 from nextrade_core.strategies.base import Signal, Strategy
 
 from .ports import MarketSource, TradingStore
@@ -73,7 +74,9 @@ class TradingDaemon:
     def __init__(self, cfg: DaemonConfig, *, source: MarketSource, broker, store: TradingStore,
                  strategies: dict[str, Strategy], naia: Naia, risk: RiskEngine, costs: CostModel,
                  instruments: dict[str, Instrument], controller: TradingStateMachine, clock,
-                 execution: ExecutionEngine | None = None, controls=None, reentry=None) -> None:
+                 execution: ExecutionEngine | None = None, controls=None, reentry=None,
+                 net_exit: NetProfitExit | None = None, net_cfg: NetExitConfig | None = None,
+                 can_short: bool = False) -> None:
         self.cfg, self.source, self.broker, self.store = cfg, source, broker, store
         self.strategies, self.naia, self.risk, self.costs = strategies, naia, risk, costs
         self.instruments, self.controller, self.clock = instruments, controller, clock
@@ -81,6 +84,11 @@ class TradingDaemon:
         # callable returning [(target_state, actor, reason)] requested by other processes
         self.controls = controls
         self.reentry = reentry          # optional ReentryGuard (scalping)
+        self.net_exit = net_exit        # optional NetProfitExit: close on NET profit, every poll, from the live quote
+        self.net_cfg = net_cfg          # optional NetExitConfig: reject signals whose target cannot clear costs
+        self.can_short = can_short      # spot venues cannot short: short signals are skipped and counted
+        self._entered: set[str] | None = None   # signal keys already traded (also across restarts): never trade one twice
+        self.stats: dict[str, int] = {"scans": 0, "markets_scanned": 0, "manage_checks": 0}
         self.last_bar: datetime | None = None
         self.funnel = Funnel()
         self.peak = self.day_start = self.week_start = None
@@ -218,12 +226,18 @@ class TradingDaemon:
             self.reentry.record_close(p["symbol"], p.get("strategy", ""), sg.sign if sg is not None else 1, float(pnl), now,
                                       pd.Timestamp(sg.bar_time if sg is not None else p.get("opened_at") or now).to_pydatetime())
         self.funnel["net_winners" if pnl > 0 else "net_losers"] += 1
+        if self.net_exit is not None:
+            self.net_exit.forget(p["id"])
         costs = dec(p.get("entry_fee", 0)) + fee
+        gross = pnl + costs
+        friction = (dec(self.costs.spread(p["symbol"])) + 2 * dec(self.costs.slippage_bps) / 10_000) * qty * entry
         opened = p.get("opened_at")
         held = f", held {int((now - opened).total_seconds() // 60)} min" if opened else ""
+        verdict = "NET WIN" if pnl > 0 else "NET LOSS"
         self.store.alert("info", "position_closed",
-                         f"{p['symbol']} closed by {reason} ({p.get('strategy', '?')}): gross before fees "
-                         f"{pnl + costs:.4f}, fees {costs:.4f}, NET {pnl:.4f} {self.cfg.quote_asset}{held} [paper]")
+                         f"{verdict} {p['symbol']} ({p.get('strategy', '?')}) closed by {reason}: gross {gross:+.4f}, "
+                         f"fees {costs:.4f}, spread+slippage in fills ~{friction:.4f}, NET {pnl:+.4f} "
+                         f"{self.cfg.quote_asset}{held} [paper]")
 
     async def _exit_now(self, p: dict, reason: str) -> None:
         for leg in ("tp", "sl"):
@@ -243,6 +257,25 @@ class TradingDaemon:
         else:
             self.store.alert("critical", "exit_failed", f"{p['symbol']}: exit order ended {order.status}")
 
+    async def manage_open(self, now: datetime) -> int:
+        """Every poll: close any position whose NET profit (after exit fee, spread, slippage and the entry
+        fee) cleared the minimum and then gave back too much. The same rule the backtester runs."""
+        if self.net_exit is None:
+            return 0
+        closed = 0
+        for p in self.store.open_positions(self.cfg.run_id):
+            q = self.source.latest_quote(p["symbol"])
+            if not q or not self.source.data_ok(p["symbol"], now):
+                continue
+            self.stats["manage_checks"] += 1
+            mid = float((q[0] + q[1]) / 2)
+            why = self.net_exit.reason(p["id"], p["symbol"], 1, float(p["entry_price"]), float(p["qty"]),
+                                       float(p.get("entry_fee", 0)), mid, p.get("bars_held", 0))
+            if why:
+                await self._exit_now(p, why)
+                closed += 1
+        return closed
+
     # ------------------------------------------------------------------ the bar cycle
     async def on_bar(self, now: datetime) -> dict:
         tf = self.cfg.timeframe
@@ -254,6 +287,10 @@ class TradingDaemon:
                 f["regime"] = classify(f)
                 frames[sym] = f
 
+        self.stats["scans"] += 1
+        self.stats["markets_scanned"] += len(frames)
+        self.stats["markets_last_cycle"] = len(frames)
+
         # a. open positions: NPEI and time stop
         for p in self.store.open_positions(self.cfg.run_id):
             f = frames.get(p["symbol"])
@@ -263,12 +300,15 @@ class TradingDaemon:
             self.store.update_position(p["id"], bars_held=bars)
             sig = p["signal_obj"] if "signal_obj" in p else None
             strat = self.strategies.get(p["strategy"])
-            if sig is None or strat is None:
-                continue
-            a = assess(sig, strat, fill=float(p["entry_price"]), current_stop=float(p["stop"]), bars_held=bars,
-                       bar=f.iloc[-1], entry_regime=p.get("thesis", {}).get("regime"), config=self.cfg.exit_config)
-            self.store.update_position(p["id"], health=a.health.value)
-            reason = a.exit_reason or ("time" if bars >= sig.max_hold_bars else None)
+            max_hold = sig.max_hold_bars if sig is not None else (p.get("thesis") or {}).get("max_hold_bars")
+            reason = None
+            if sig is not None and strat is not None:
+                a = assess(sig, strat, fill=float(p["entry_price"]), current_stop=float(p["stop"]), bars_held=bars,
+                           bar=f.iloc[-1], entry_regime=p.get("thesis", {}).get("regime"), config=self.cfg.exit_config)
+                self.store.update_position(p["id"], health=a.health.value)
+                reason = a.exit_reason
+            if reason is None and max_hold and bars >= max_hold:
+                reason = "time"
             if reason:
                 await self._exit_now({**p, "bars_held": bars}, reason)
 
@@ -281,7 +321,23 @@ class TradingDaemon:
                 for sig in strat.generate(f.iloc[-300:] if len(f) > 300 else f, sym, tf):
                     if pd.Timestamp(sig.bar_time) != last_bar:
                         continue
+                    if sig.sign < 0 and not self.can_short:
+                        self.funnel["skipped_short_unsupported"] += 1   # spot cannot short: counted, never executed
+                        continue
+                    if self._entered is None:
+                        seed = getattr(self.store, "entered_signal_keys", None)
+                        self._entered = set(seed(self.cfg.run_id)) if seed else set()
+                    if sig.key in self._entered:
+                        self.funnel["duplicate_signal_blocked"] += 1
+                        continue
                     self.funnel["signals"] += 1
+                    if self.net_cfg is not None:
+                        qg = self.source.latest_quote(sym)
+                        why = entry_gate(self.costs, sym, float((qg[0] + qg[1]) / 2) if qg else float(sig.entry),
+                                         sig.target, sig.sign, self.net_cfg)
+                        if why:
+                            self.funnel["rejected_by_net_target"] += 1
+                            continue
                     if self.reentry is not None:
                         ok, _why = self.reentry.check(sym, sig.strategy, sig.sign, pd.Timestamp(sig.bar_time).to_pydatetime(), now)
                         if not ok:
@@ -333,6 +389,9 @@ class TradingDaemon:
         return self.funnel.as_table()
 
     async def _enter(self, sig: Signal, qty: Decimal, opp, regime) -> None:
+        if sig.sign < 0 and not self.can_short:
+            self.funnel["skipped_short_unsupported"] += 1      # defence in depth: never buy on a short signal
+            return
         run = str(self.cfg.run_id)
         cid = make_client_order_id(run, sig.key, "entry")
         self._order_purpose[cid] = "entry"
@@ -345,6 +404,7 @@ class TradingDaemon:
             self.funnel["orders_rejected"] += 1
             return
         self.funnel["orders_filled"] += 1
+        (self._entered if self._entered is not None else set()).add(sig.key)
         now = self.clock.now()
         fill, fee = order.avg_price, order.fee
         inst = self.instruments[sig.symbol]
@@ -365,8 +425,9 @@ class TradingDaemon:
         try:
             await self.broker.place_protective_exit(sig.symbol, held, dec(sig.stop), dec(sig.target), list_id)
             self.store.update_position(pid, exit_list_id=list_id)
-            self.store.alert("info", "trade_opened", f"{sig.symbol} {sig.strategy}: bought {held} at {fill:.6g}, "
-                                                     f"stop {sig.stop:.6g}, target {sig.target:.6g}")
+            self.store.alert("info", "trade_opened", f"OPENED {sig.symbol} ({sig.strategy}): bought {held} at {fill:.6g} "
+                                                     f"(notional {held * fill:.2f} {self.cfg.quote_asset}, entry fee {fee:.4f}), "
+                                                     f"stop {sig.stop:.6g}, target {sig.target:.6g} [paper]")
         except (VenueError, RejectedError) as exc:
             self.store.alert("critical", "protective_exit_failed", f"{sig.symbol}: {exc}; closing immediately")
             p = next(x for x in self.store.open_positions(self.cfg.run_id) if x["id"] == pid)
@@ -406,6 +467,7 @@ class TradingDaemon:
                 if q:
                     self.broker.update_quote(sym, q[0], q[1])
         await self.sync_exits()
+        await self.manage_open(now)
         result = None
         closed = [self.source.last_closed_bar(s, self.cfg.timeframe, now) for s in self.cfg.symbols]
         closed = [c for c in closed if c is not None]
@@ -414,7 +476,8 @@ class TradingDaemon:
             self.last_bar = latest
             result = await self.on_bar(now)
         self.store.heartbeat(self.cfg.process_name, now, {"state": self.controller.state.value,
-                                                         "last_bar": str(self.last_bar)})
+                                                         "last_bar": str(self.last_bar),
+                                                         "funnel": self.funnel.as_table(), "stats": dict(self.stats)})
         return result
 
     async def run(self, stop: asyncio.Event, poll_s: float = 5.0) -> None:

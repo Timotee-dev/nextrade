@@ -1,0 +1,74 @@
+Data quality: 28 of 28 pairs usable (report data-quality-20261122-0900.md).
+28 symbols on bybit; 2026-10-23 -> 2026-11-22; hold-out = last 10 days (from 2026-11-12 09:00), opened only for strategies that pass development.
+
+=== 1m: 28 symbols, fee 0.10%/side, spread 4 bps, slippage 3 bps/side ===
+  scalp_momentum: signals 885.414/day   skipped: skip:short_needs_margin_account x2901, skip:reentry_guard x1128, nara:stress_loss_within_limit x374
+    development:    87 trades    14.5/day  gross     +2.81  fees 50.38  spread+slip~22.21  NET    -69.78 (-7.0%)  win 40.2%  PF 0.42  maxDD 7.2%  avg hold 4m  open peak 1 mean 0.0  symbols 7
+    gate: FAIL  - only 87 out-of-sample trades; need at least 100; 95% interval of mean net R does not lie above zero; not positive in both halves of the test period (-0.608, -0.477)
+    => does NOT qualify: failed the development-period decision gate; net loss after costs in development period; only 14.5 trades/day (need 20); hold-out not run (development did not pass)
+  scalp_trend: signals 42.299/day   skipped: skip:short_needs_margin_account x163, nara:stress_loss_within_limit x25, skip:reentry_guard x9
+    development:    13 trades     2.2/day  gross     +3.84  fees 6.35  spread+slip~2.73  NET     -5.24 (-0.5%)  win 46.2%  PF 0.58  maxDD 1.0%  avg hold 11m  open peak 1 mean 0.0  symbols 3
+    gate: FAIL  - only 13 out-of-sample trades; need at least 100; 95% interval of mean net R does not lie above zero; not positive in both halves of the test period (+0.338, -0.595)
+    => does NOT qualify: failed the development-period decision gate; net loss after costs in development period; only 2.2 trades/day (need 20); hold-out not run (development did not pass)
+  scalp_meanrev: signals 12.32/day   skipped: nara:stress_loss_within_limit x75, skip:short_needs_margin_account x63, skip:reentry_guard x4
+    development:    11 trades     0.7/day  gross     -3.12  fees 6.96  spread+slip~3.14  NET    -13.22 (-1.3%)  win 36.4%  PF 0.19  maxDD 1.6%  avg hold 4m  open peak 1 mean 0.0  symbols 8
+    gate: FAIL  - only 11 out-of-sample trades; need at least 100; 95% interval of mean net R does not lie above zero; does not beat the random-entry baseline; not positive in both halves of the test period (-1.583, -0.212)
+    => does NOT qualify: failed the development-period decision gate; net loss after costs in development period; only 0.7 trades/day (need 20); hold-out not run (development did not pass)
+  scalp_breakout: signals 224.43/day   skipped: skip:short_needs_margin_account x1574, nara:stress_loss_within_limit x621, skip:reentry_guard x176
+    development:    29 trades     1.9/day  gross    -15.36  fees 18.55  spread+slip~8.69  NET    -42.60 (-4.3%)  win 20.7%  PF 0.20  maxDD 4.4%  avg hold 2m  open peak 1 mean 0.0  symbols 8
+    gate: FAIL  - only 29 out-of-sample trades; need at least 100; 95% interval of mean net R does not lie above zero; does not beat the random-entry baseline; not positive in both halves of the test period (-0.762, -1.172)
+    => does NOT qualify: failed the development-period decision gate; net loss after costs in development period; only 1.9 trades/day (need 20); hold-out not run (development did not pass)
+  scalp_vol: signals 147.03/day   skipped: skip:short_needs_margin_account x1051, nara:stress_loss_within_limit x317, skip:reentry_guard x268
+    development:    90 trades     6.0/day  gross     -6.56  fees 56.86  spread+slip~26.37  NET    -89.80 (-9.0%)  win 30.0%  PF 0.34  maxDD 9.0%  avg hold 6m  open peak 1 mean 0.0  symbols 12
+    gate: FAIL  - only 90 out-of-sample trades; need at least 100; 95% interval of mean net R does not lie above zero; not positive in both halves of the test period (-0.736, -0.629)
+    => does NOT qualify: failed the development-period decision gate; net loss after costs in development period; only 6.0 trades/day (need 20); hold-out not run (development did not pass)
+  scalp_short: spot cannot short: signals are generated but cannot be traded; skipped
+
+=== 3m: 28 symbols, fee 0.10%/side, spread 4 bps, slippage 3 bps/side ===
+  scalp_momentum: signals 270.819/day   skipped: skip:short_needs_margin_account x905, skip:reentry_guard x277, nara:stress_loss_within_limit x39
+    development:    97 trades    16.2/day  gross     +5.86  fees 49.32  spread+slip~21.40  NET    -64.86 (-6.5%)  win 42.3%  PF 0.50  maxDD 6.5%  avg hold 11m  open peak 2 mean 0.2  symbols 7
+    gate: FAIL  - only 97 out-of-sample trades; need at least 100; 95% interval of mean net R does not lie above zero; not positive in both halves of the test period (-0.403, -0.401)
+    => does NOT qualify: failed the development-period decision gate; net loss after costs in development period; only 16.2 trades/day (need 20); hold-out not run (development did not pass)
+  scalp_trend: signals 33.869/day   skipped: skip:short_needs_margin_account x120, skip:reentry_guard x28, nara:stress_loss_within_limit x6
+    development:    12 trades     2.0/day  gross     +4.37  fees 6.81  spread+slip~3.01  NET     -5.45 (-0.5%)  win 50.0%  PF 0.61  maxDD 0.7%  avg hold 22m  open peak 1 mean 0.1  symbols 5
+    gate: FAIL  - only 12 out-of-sample trades; need at least 100; 95% interval of mean net R does not lie above zero; not positive in both halves of the test period (-0.401, -0.243)
+    => does NOT qualify: failed the development-period decision gate; net loss after costs in development period; only 2.0 trades/day (need 20); hold-out not run (development did not pass)
+  scalp_meanrev: signals 4.153/day
+    development:     0 trades     0.0/day  gross     +0.00  fees 0.00  spread+slip~0.00  NET     +0.00 (+0.0%)  win 0.0%  PF 0.00  maxDD 0.0%  avg hold 0m  open peak 0 mean 0.0  symbols 0
+    gate: FAIL  - only 0 out-of-sample trades; need at least 100; 95% interval of mean net R does not lie above zero; does not beat the random-entry baseline
+    => does NOT qualify: failed the development-period decision gate; net loss after costs in development period; only 0.0 trades/day (need 20); hold-out not run (development did not pass)
+  scalp_breakout: signals 68.73/day   skipped: skip:short_needs_margin_account x420, nara:stress_loss_within_limit x113, skip:reentry_guard x59
+    development:    44 trades     3.7/day  gross     -7.17  fees 29.32  spread+slip~13.46  NET    -49.96 (-5.0%)  win 29.5%  PF 0.30  maxDD 5.3%  avg hold 8m  open peak 1 mean 0.0  symbols 12
+    gate: FAIL  - only 44 out-of-sample trades; need at least 100; 95% interval of mean net R does not lie above zero; does not beat the random-entry baseline; not positive in both halves of the test period (-0.342, -1.223)
+    => does NOT qualify: failed the development-period decision gate; net loss after costs in development period; only 3.7 trades/day (need 20); hold-out not run (development did not pass)
+  scalp_vol: signals 35.548/day   skipped: skip:short_needs_margin_account x270, nara:stress_loss_within_limit x24, skip:reentry_guard x22
+    development:    42 trades     3.5/day  gross    -10.18  fees 23.00  spread+slip~10.69  NET    -43.87 (-4.4%)  win 23.8%  PF 0.30  maxDD 4.8%  avg hold 19m  open peak 1 mean 0.0  symbols 12
+    gate: FAIL  - only 42 out-of-sample trades; need at least 100; 95% interval of mean net R does not lie above zero; does not beat the random-entry baseline; not positive in both halves of the test period (-0.416, -0.828)
+    => does NOT qualify: failed the development-period decision gate; net loss after costs in development period; only 3.5 trades/day (need 20); hold-out not run (development did not pass)
+  scalp_short: spot cannot short: signals are generated but cannot be traded; skipped
+
+=== 5m: 28 symbols, fee 0.10%/side, spread 4 bps, slippage 3 bps/side ===
+  scalp_momentum: signals 159.697/day   skipped: skip:short_needs_margin_account x545, skip:reentry_guard x139, nara:stress_loss_within_limit x17
+    development:    65 trades    10.8/day  gross     -3.08  fees 30.54  spread+slip~13.53  NET    -47.15 (-4.7%)  win 38.5%  PF 0.50  maxDD 4.9%  avg hold 14m  open peak 2 mean 0.1  symbols 8
+    gate: FAIL  - only 65 out-of-sample trades; need at least 100; 95% interval of mean net R does not lie above zero; not positive in both halves of the test period (-0.477, -0.397)
+    => does NOT qualify: failed the development-period decision gate; net loss after costs in development period; only 10.8 trades/day (need 20); hold-out not run (development did not pass)
+  scalp_trend: signals 32.107/day   skipped: skip:short_needs_margin_account x150, skip:reentry_guard x15, nara:stress_loss_within_limit x2
+    development:    17 trades     2.8/day  gross     -3.28  fees 8.42  spread+slip~3.72  NET    -15.43 (-1.5%)  win 35.3%  PF 0.38  maxDD 1.5%  avg hold 27m  open peak 1 mean 0.1  symbols 5
+    gate: FAIL  - only 17 out-of-sample trades; need at least 100; 95% interval of mean net R does not lie above zero; does not beat the random-entry baseline; not positive in both halves of the test period (-0.693, -0.339)
+    => does NOT qualify: failed the development-period decision gate; net loss after costs in development period; only 2.8 trades/day (need 20); hold-out not run (development did not pass)
+  scalp_meanrev: signals 2.523/day
+    development:     0 trades     0.0/day  gross     +0.00  fees 0.00  spread+slip~0.00  NET     +0.00 (+0.0%)  win 0.0%  PF 0.00  maxDD 0.0%  avg hold 0m  open peak 0 mean 0.0  symbols 0
+    gate: FAIL  - only 0 out-of-sample trades; need at least 100; 95% interval of mean net R does not lie above zero; does not beat the random-entry baseline
+    => does NOT qualify: failed the development-period decision gate; net loss after costs in development period; only 0.0 trades/day (need 20); hold-out not run (development did not pass)
+  scalp_breakout: signals 37.665/day   skipped: skip:short_needs_margin_account x240, nara:stress_loss_within_limit x36, skip:reentry_guard x16
+    development:    39 trades     3.2/day  gross     -6.23  fees 24.37  spread+slip~10.99  NET    -41.59 (-4.2%)  win 30.8%  PF 0.34  maxDD 4.2%  avg hold 12m  open peak 1 mean 0.0  symbols 12
+    gate: FAIL  - only 39 out-of-sample trades; need at least 100; 95% interval of mean net R does not lie above zero; does not beat the random-entry baseline; not positive in both halves of the test period (-0.364, -0.959)
+    => does NOT qualify: failed the development-period decision gate; net loss after costs in development period; only 3.2 trades/day (need 20); hold-out not run (development did not pass)
+  scalp_vol: signals 19.218/day   skipped: skip:short_needs_margin_account x160, skip:reentry_guard x5, nara:stress_loss_within_limit x5
+    development:    22 trades     1.8/day  gross     +5.41  fees 10.80  spread+slip~4.80  NET    -10.19 (-1.0%)  win 36.4%  PF 0.67  maxDD 1.4%  avg hold 27m  open peak 1 mean 0.0  symbols 12
+    gate: FAIL  - only 22 out-of-sample trades; need at least 100; 95% interval of mean net R does not lie above zero; not positive in both halves of the test period (-0.566, -0.002)
+    => does NOT qualify: failed the development-period decision gate; net loss after costs in development period; only 1.8 trades/day (need 20); hold-out not run (development did not pass)
+  scalp_short: spot cannot short: signals are generated but cannot be traded; skipped
+
+No strategy passed development + hold-out with enough trades per day after costs. That is a result, not a failure of the test.
+Report: C:\Users\HPBV\Desktop\nextrade\research\validation\scalping-20261122-0904.md

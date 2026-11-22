@@ -417,3 +417,9 @@ real Milestone 0 result.
 - `validate_scalping`: per strategy/timeframe/pair gross, fees, estimated spread+slippage, net, win rate, PF, max drawdown, average hold, peak open positions; CSV by pair.
 - Re-entry guard wired (opt-in) into Backtester and TradingDaemon. Net-profit exit still unwired (recorded in ADR 0013).
 - `verify_scalping_behaviour`: mechanical checks of simultaneous positions, auto exits, fresh signals, cooldown, continuous scanning.
+
+## 2026-11-22 (evening): live-market paper scalping (ADR 0014)
+- Net-profit exit and net-of-cost entry gate now shared by the backtester and the trader; spot short signals skipped and counted;
+  duplicate-signal protection; time stop without a signal object; exposure limits in NARA.
+- New: `authorise_paper_trial`, `run_paper_scalper` (supervisor), `stop_paper_scalper`, `paper_status`, `paper_safety` write guard.
+- Smoke-tested with real child processes against a local fake exchange (sandbox has no exchange access). No strategy result exists yet.

@@ -226,6 +226,9 @@ def test_old_approval_files_without_timeframe_still_load(tmp_path):
 
 def test_run_trader_accepts_bybit_venue_and_marks_scalp_rule_based(settings, tmp_path, capsys):
     settings.BASE_DIR = tmp_path
+    with pytest.raises(CommandError, match="authorise_paper_trial"):             # the approvals file is the only door
+        call_command("run_trader", venue="bybit", strategies="scalp_trend", timeframe="5m", max_steps=1)
+    call_command("authorise_paper_trial")
     with pytest.raises(CommandError, match="No instruments"):
         call_command("run_trader", venue="bybit", strategies="scalp_trend", timeframe="5m", max_steps=1)
 

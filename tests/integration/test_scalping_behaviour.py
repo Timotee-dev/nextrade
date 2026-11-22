@@ -27,8 +27,10 @@ def test_behaviour_command_on_synthetic_data_demonstrates_the_mechanics(settings
     assert "[PASS] re-entry respects the cooldown" in out
     assert "[PASS] new positions opened while others are still open" in out
     assert "[PASS] re-entry guard used by the backtester" in out and "[PASS] re-entry guard used by the trader loop" in out
-    # honesty: the net-profit exit is NOT wired into the simulator or the trader loop and the report says so
-    assert "[FAIL] net-profit exit (should_take_profit) used by the backtester" in out
+    # the net-of-cost entry gate and the net-profit exit are now wired into the simulator and the trader loop
+    assert "[PASS] net-of-cost entry gate used by the backtester" in out
+    assert "[PASS] net-profit exit used by the backtester" in out and "[PASS] net-profit exit used by the trader loop" in out
+    assert "[PASS] short signals skipped on spot, counted as skipped" in out
     assert list((tmp_path / "research" / "validation").glob("behaviour-*.json"))
 
 

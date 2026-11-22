@@ -12,3 +12,5 @@ reports/*
 data/
 research/outputs/
 .vscode/
+run/
+logs/

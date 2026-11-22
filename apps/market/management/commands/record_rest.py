@@ -10,7 +10,9 @@ symbol is skipped and counted; the status line shows errors. Stale data is never
 
 from __future__ import annotations
 
+import logging
 import time
+from pathlib import Path
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 
@@ -67,8 +69,10 @@ class Command(BaseCommand):
         parser.add_argument("--symbols", default=None)
         parser.add_argument("--interval", type=float, default=20.0)
         parser.add_argument("--max-polls", type=int, default=0)
+        parser.add_argument("--stop-file", default=None, help="exit cleanly when this file appears")
 
     def handle(self, *args, **o):
+        logging.getLogger("httpx").setLevel(logging.WARNING)      # one line per request would drown the log
         qs = Instrument.objects.filter(venue=o["venue"], candles__isnull=False).distinct()
         if o["symbols"]:
             qs = qs.filter(symbol__in=[s.strip().upper() for s in o["symbols"].split(",")])
@@ -82,7 +86,13 @@ class Command(BaseCommand):
             while True:
                 t0 = time.monotonic()
                 now = now_utc()
-                poll_once(client, store, instruments, now, stats)
+                if o["stop_file"] and Path(o["stop_file"]).exists():
+                    break
+                try:
+                    poll_once(client, store, instruments, now, stats)
+                except Exception as exc:               # noqa: BLE001  one bad poll must not end the recorder
+                    stats["errors"] += 1
+                    stats["last_error"] = f"{type(exc).__name__}: {str(exc)[:100]}"
                 stats["polls"] += 1
                 if stats["polls"] % 30 == 1:
                     err = f", last error: {stats['last_error']}" if stats.get("last_error") else ""

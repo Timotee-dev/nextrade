@@ -83,11 +83,12 @@ class Backtester:
                  costs: CostModel, risk: RiskEngine, initial_cash: Decimal = Decimal(1000), *,
                  scorer: Scorer | None = None, exit_policy: ExitPolicy | None = None,
                  clusters: dict[str, str] | None = None, leverage: Decimal = Decimal(1),
-                 reentry=None) -> None:
+                 reentry=None, entry_gate=None) -> None:
         self.frames, self.instruments = frames, instruments
         self.costs, self.risk = costs, risk
         self.initial_cash = Decimal(initial_cash)
         self.scorer, self.exit_policy = scorer, exit_policy
+        self.entry_gate = entry_gate    # optional (symbol, open_price, signal) -> rejection reason | None (net-of-cost target check)
         self.reentry = reentry          # optional ReentryGuard (scalping): cooldowns, flips, loss streaks, stale signals
         self.margin = any(i.asset_class is AssetClass.FOREX for i in instruments.values())
         self.leverage = Decimal(leverage) if self.margin else Decimal(1)
@@ -207,6 +208,9 @@ class Backtester:
                     continue
                 if blocked_until is not None and T < blocked_until:
                     rejections["skip:halted"] += 1
+                    continue
+                if self.entry_gate is not None and self.entry_gate(sym, float(o), sig):
+                    rejections["skip:net_target_below_costs"] += 1
                     continue
                 fill = dec(self.costs.entry_fill(sym, o, sign=sg))
                 fills[sym] = (sig, fill)

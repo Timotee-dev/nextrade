@@ -31,6 +31,7 @@ class Approval:
     evidence: str
     approved_at: str
     timeframe: str = ""          # the timeframe the evidence was gathered on ("" = any, older files)
+    trial: bool = False          # operator-authorised exploratory paper trial: NOT a decision-gate pass
 
 
 def approvals_path(base: Path) -> Path:

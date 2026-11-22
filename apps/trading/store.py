@@ -64,6 +64,11 @@ class DjangoTradingStore:
         row = Position.objects.create(run_id=run_id, signal=signal_row, **f)
         return row.pk
 
+    def entered_signal_keys(self, run_id):
+        """Signals this run already opened a position on: a restart must never trade the same signal twice."""
+        close_old_connections()
+        return set(Position.objects.filter(run_id=run_id, signal__isnull=False).values_list("signal__key", flat=True))
+
     def update_position(self, position_id, **f):
         Position.objects.filter(pk=position_id).update(**f)
 

@@ -1,6 +1,6 @@
 # NEXTRADE status
 
-Last updated: 2026-11-22 (scalping engine framework built; no scalp strategy tested on real data yet)
+Last updated: 2026-11-22 (live-market PAPER scalping available as an unvalidated exploratory trial; no profitability evidence yet)
 
 | Stage | Phase | Status |
 | --- | --- | --- |
@@ -23,6 +23,7 @@ Last updated: 2026-11-22 (scalping engine framework built; no scalp strategy tes
 | Crypto fast | trend/meanrev/breakout at Gate.io costs FAIL (ADR 0010) | Ruled out |
 | Microstructure | Quidax book recorder + gap / market-making analysis (ADR 0011) | Recording 2-4 weeks |
 | Scalping | Strategies A-F, MTF context, net-profit exits, capital check, re-entry guard, approvals, scanner, analytics (ADR 0012) | Built; 483 tests pass. NOT yet backtested on real data. Research only until a gate pass + `approve_strategy` |
+| Paper scalping | `run_paper_scalper` (ADR 0014): 6 pre-registered strategies, NGN 40,000 simulated, real Bybit prices, no real orders | Built; UNVALIDATED trial; see `paper_status` |
 | Capacity | 100 trades/day per market | Not yet load-tested |
 
 Tests: 483 passing. Phases 4-13 were first built in an earlier
@@ -48,3 +49,14 @@ Live stays disabled: no live broker exists and it needs NEXTRADE_LIVE_ENABLED=ye
 
 ## Validation (2026-11-22)
 Harness built and tested on synthetic data. Real evidence pending: run probe_venues, load_bybit_history --top 30 --days 30, validate_scalping. Paper trading starts only for approved strategies.
+
+## Paper scalping (simulated money, real prices): what to run
+```
+.venv\Scripts\python manage.py authorise_paper_trial          # once: records your authorisation (paper only)
+.venv\Scripts\python manage.py run_paper_scalper --check      # pre-flight only, starts nothing
+.venv\Scripts\python manage.py run_paper_scalper              # start / restart (resumes the same paper account)
+.venv\Scripts\python manage.py paper_status --watch 10        # second window: live dashboard
+.venv\Scripts\python manage.py stop_paper_scalper             # safe stop (or Ctrl+C in the launcher window)
+```
+Logs: `logs\paper\recorder.log`, `trader.log`, `telegram.log`. It is an UNVALIDATED exploratory trial: the numbers are evidence, not proof.
+After a daily-loss pause the trader stays paused until you resume it (Telegram /resume or restart the launcher): deliberate.

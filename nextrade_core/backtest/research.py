@@ -47,6 +47,7 @@ class ResearchConfig:
     holdout_from: pd.Timestamp | None = None  # count only trades decided on/after this (final confirmation)
     min_train_signals: int = 30
     reentry: object | None = None  # a ReentryConfig: scalping re-entry rules applied in every simulated run
+    net_exit: object | None = None  # a NetExitConfig: net-of-cost entry gate and profit exit, same rule the trader uses
 
 
 @dataclass
@@ -67,6 +68,18 @@ def _guard(cfg):
         return None
     from nextrade_core.scalping.reentry import ReentryGuard
     return ReentryGuard(cfg.reentry)
+
+
+def _bt_kwargs(cfg, costs, exit_policy) -> dict:
+    """Backtester keyword arguments shared by every simulated run of a fold (fresh state each call)."""
+    kw = {"exit_policy": exit_policy, "reentry": _guard(cfg)}
+    if cfg.net_exit is not None:
+        from nextrade_core.scalping.net_exit import backtest_entry_gate, backtest_exit_policy
+        net = backtest_exit_policy(costs, cfg.net_exit)
+        first = exit_policy
+        kw["exit_policy"] = (lambda p, row, i: (first(p, row, i) if first else None) or net(p, row, i))
+        kw["entry_gate"] = backtest_entry_gate(costs, cfg.net_exit)
+    return kw
 
 
 def _from(fold, cfg) -> pd.Timestamp:
@@ -118,15 +131,15 @@ def evaluate_strategy(strategy: Strategy, frames: dict[str, pd.DataFrame], instr
             test_frames = {sym: f[(f.index >= fold.test_start - pd.Timedelta(days=0)) & (f.index < fold.test_end)]
                            for sym, f in frames.items()}
             bt = Backtester(test_frames, instruments, costs, risk, cfg.initial_cash, leverage=cfg.leverage,
-                            scorer=None if judged_raw else scorer, exit_policy=exit_policy, reentry=_guard(cfg))
+                            scorer=None if judged_raw else scorer, **_bt_kwargs(cfg, costs, exit_policy))
             res = bt.run(_signals_in(signals, _from(fold, cfg), fold.test_end))
-            raw_res = Backtester(test_frames, instruments, costs, risk, cfg.initial_cash, leverage=cfg.leverage, exit_policy=exit_policy, reentry=_guard(cfg)).run(
+            raw_res = Backtester(test_frames, instruments, costs, risk, cfg.initial_cash, leverage=cfg.leverage, **_bt_kwargs(cfg, costs, exit_policy)).run(
                 _signals_in(signals, _from(fold, cfg), fold.test_end))
             if len(raw_res.trades):
                 raw_trades.append(raw_res.trades.assign(fold=fold.number))
             for k, v in res.rejections.items():
                 rejections_total[k] = rejections_total.get(k, 0) + v
-            base_bt = Backtester(test_frames, instruments, costs, risk, cfg.initial_cash, leverage=cfg.leverage, exit_policy=exit_policy, reentry=_guard(cfg))
+            base_bt = Backtester(test_frames, instruments, costs, risk, cfg.initial_cash, leverage=cfg.leverage, **_bt_kwargs(cfg, costs, exit_policy))
             base_res = base_bt.run(_signals_in(base_signals, _from(fold, cfg), fold.test_end))
             if len(res.trades):
                 oos_trades.append(res.trades.assign(fold=fold.number))

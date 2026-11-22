@@ -15,6 +15,7 @@ Responses carry retCode 0 on success. HTTP 403 usually means the region is block
 
 from __future__ import annotations
 
+import os
 import time
 from collections.abc import Callable
 from datetime import datetime, timedelta
@@ -27,7 +28,7 @@ from adapters.base import RateLimitedError, RejectedError, RetryableError
 from nextrade_core.data.candles import EPOCH, Candle, Timeframe
 from nextrade_core.domain.instrument import AssetClass, Instrument
 
-BASE_URL = "https://api.bybit.com"
+BASE_URL = os.environ.get("NEXTRADE_BYBIT_BASE_URL", "https://api.bybit.com")   # override only to point tests at a local fake
 VENUE = "bybit"
 MAX_PER_REQUEST = 1_000
 INTERVALS = {Timeframe.M1: "1", Timeframe.M3: "3", Timeframe.M5: "5", Timeframe.M15: "15", Timeframe.M30: "30",

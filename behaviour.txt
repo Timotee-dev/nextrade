@@ -1,0 +1,15 @@
+Mechanics check on 32 symbols, 5m, 17 days, strategies: scalp_momentum, scalp_trend, scalp_meanrev, scalp_breakout, scalp_vol
+  signals generated: 3,238; trades: 60; funnel {'signals': 3238, 'entries': 60, 'closed': 60, 'rejected_by_nara': 173}; skipped {'skip:short_needs_margin_account': 2497, 'nara:stress_loss_within_limit': 173, 'skip:reentry_guard': 145, 'skip:already_in_position': 10, 'skip:halted': 352}
+  [NOT DEMONSTRATED] multiple simultaneous positions on different instruments: peak 1 open at once, mean 0.07, 18 symbols traded
+  [PASS] automatic profit-taking at the target: 17 trades closed at target, 17 of them net positive after costs
+  [PASS] automatic closure by stop, target or time limit: closed by {'stop': 41, 'target': 17, 'time': 2}
+  [PASS] every entry uses a fresh signal (no signal reused): 0 reused signal ids, 0 entries not newer than the previous trade's signal, 60 trades
+  [PASS] re-entry after closing, never while still open: 42 re-entries on a symbol, 0 opened before the earlier trade closed
+  [PASS] re-entry respects the cooldown: shortest wait between a close and the next entry on a symbol: 25 min (cooldown 15 min); 145 entries blocked by the guard, 10 signals skipped because a position was already open
+  [NOT DEMONSTRATED] new positions opened while others are still open: 0 of 60 entries happened while another position was open
+  [FAIL] scans many markets continuously: signals on 32 symbols; entries on 10 of ~17 days (per day min 1, median 6, max 12); longest quiet spell 22.1 h
+  [PASS] re-entry guard used by the backtester: Backtester(reentry=...) is checked on entry and updated on close
+  [PASS] re-entry guard used by the trader loop: TradingDaemon(reentry=...) is checked per signal and updated on close
+  [FAIL] net-profit exit (should_take_profit) used by the backtester: exits are fixed stop/target/time only
+  [FAIL] net-profit exit (should_take_profit) used by the trader loop: exits are venue stop/target orders and a time stop
+These checks show the engine's mechanics. They say nothing about whether it makes money.

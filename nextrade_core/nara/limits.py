@@ -25,6 +25,8 @@ class RiskLimits:
     max_positions: int = 10                          # operator cap
     max_spread_bps: Decimal = Decimal("15")
     max_capital_at_risk: Decimal | None = None       # absolute cap for live micro stage (account ccy)
+    max_exposure: Decimal | None = None              # all open notional as a fraction of equity (None = no cap)
+    max_symbol_exposure: Decimal | None = None       # one market's notional as a fraction of equity (None = no cap)
     gap_allowance: Decimal = Decimal("0.25")         # extra fraction of stop distance for open risk
 
     def as_dict(self) -> dict:

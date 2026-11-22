@@ -96,7 +96,7 @@ class OpportunityQueue:
 
 class Funnel(Counter):
     """Discovered -> filtered -> scored -> approved -> submitted -> filled -> closed (spec 9)."""
-    STAGES = ("signals", "rejected_by_naia", "rejected_by_reentry", "rejected_by_nara", "approved", "orders_submitted",
+    STAGES = ("signals", "rejected_by_naia", "skipped_short_unsupported", "rejected_by_net_target", "duplicate_signal_blocked", "rejected_by_reentry", "rejected_by_nara", "approved", "orders_submitted",
               "orders_filled", "orders_partially_filled", "orders_rejected", "positions_closed",
               "net_winners", "net_losers")
 

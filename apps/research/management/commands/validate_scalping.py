@@ -37,6 +37,7 @@ from nextrade_core.features.feature_set import FeatureParams, with_features
 from nextrade_core.nara.engine import RiskEngine
 from nextrade_core.nara.limits import RiskLimits, scaled_limits
 from nextrade_core.data.coverage import Thresholds
+from nextrade_core.scalping.net_exit import NetExitConfig
 from nextrade_core.scalping.reentry import ReentryConfig
 from nextrade_core.scalping.validation import (add_costs, breakdown, by_pair, covered_days, sustains_frequency)
 from nextrade_core.strategies.registry import SCALP_PREREGISTERED, make
@@ -121,9 +122,9 @@ class Command(BaseCommand):
         risk = RiskEngine(limits)
         rcfg = ReentryConfig()
         cfg = ResearchConfig(train=pd.Timedelta(days=o["train_days"]), test=pd.Timedelta(days=o["test_days"]),
-                             initial_cash=Decimal(o["capital"]), min_trades=o["min_trades"], reentry=rcfg)
+                             initial_cash=Decimal(o["capital"]), min_trades=o["min_trades"], reentry=rcfg, net_exit=NetExitConfig())
         hold_cfg = ResearchConfig(train=cfg.train, test=cfg.test, initial_cash=cfg.initial_cash,
-                                  min_trades=max(30, o["min_trades"] // 3), holdout_from=cutoff, reentry=rcfg)
+                                  min_trades=max(30, o["min_trades"] // 3), holdout_from=cutoff, reentry=rcfg, net_exit=NetExitConfig())
         self.stdout.write(f"{len(instruments)} symbols on {venue}; {start:%Y-%m-%d} -> {end:%Y-%m-%d}; "
                           f"hold-out = last {o['holdout_days']:g} days (from {cutoff:%Y-%m-%d %H:%M}), "
                           f"opened only for strategies that pass development.")

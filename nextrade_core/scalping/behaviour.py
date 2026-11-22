@@ -18,16 +18,24 @@ from .validation import concurrency
 Check = tuple[str, bool | None, str]          # passed: True, False, or None (not demonstrated)
 
 
+def _net_exit_ok() -> bool:
+    from . import net_exit
+    return "should_take_profit" in inspect.getsource(net_exit)
+
+
 def wiring(backtester_cls, daemon_cls) -> list[Check]:
     """What the code actually uses, found by reading it (not by trusting documentation)."""
     bt, dm = inspect.getsource(backtester_cls), inspect.getsource(daemon_cls)
     return [
         ("re-entry guard used by the backtester", "reentry" in bt, "Backtester(reentry=...) is checked on entry and updated on close"),
         ("re-entry guard used by the trader loop", "reentry" in dm, "TradingDaemon(reentry=...) is checked per signal and updated on close"),
-        ("net-profit exit (should_take_profit) used by the backtester", "should_take_profit" in bt,
-         "exits are fixed stop/target/time only" if "should_take_profit" not in bt else "wired"),
-        ("net-profit exit (should_take_profit) used by the trader loop", "should_take_profit" in dm,
-         "exits are venue stop/target orders and a time stop" if "should_take_profit" not in dm else "wired"),
+        ("net-of-cost entry gate used by the backtester", "entry_gate" in bt, "Backtester(entry_gate=...) rejects signals whose target cannot clear costs"),
+        ("net-profit exit used by the backtester", "exit_policy" in bt and _net_exit_ok(),
+         "exit_policy runs the shared NetProfitExit (built on should_take_profit)"),
+        ("net-profit exit used by the trader loop", "net_exit" in dm and _net_exit_ok(),
+         "TradingDaemon(net_exit=NetProfitExit) is evaluated on every poll with the live quote"),
+        ("short signals skipped on spot, counted as skipped", "skipped_short_unsupported" in dm,
+         "spot venues cannot short: such signals are counted, never executed"),
     ]
 
 

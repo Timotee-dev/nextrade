@@ -30,6 +30,7 @@ from nextrade_core.features.feature_set import FeatureParams, with_features
 from nextrade_core.nara.engine import RiskEngine
 from nextrade_core.nara.limits import RiskLimits, scaled_limits
 from nextrade_core.scalping import behaviour
+from nextrade_core.scalping.net_exit import backtest_entry_gate, backtest_exit_policy
 from nextrade_core.scalping.reentry import ReentryConfig, ReentryGuard
 from nextrade_core.strategies.registry import SCALP_PREREGISTERED, make
 from services.trader.daemon import TradingDaemon
@@ -92,7 +93,8 @@ class Command(BaseCommand):
             all_sigs += sigs
         all_sigs.sort(key=lambda s: s.decision_time)
         n_sig_symbols = {s.symbol for s in all_sigs}
-        res = Backtester(frames, domain, costs, RiskEngine(limits), Decimal(o["capital"]), reentry=ReentryGuard()).run(all_sigs)
+        res = Backtester(frames, domain, costs, RiskEngine(limits), Decimal(o["capital"]), reentry=ReentryGuard(),
+                         entry_gate=backtest_entry_gate(costs), exit_policy=backtest_exit_policy(costs)).run(all_sigs)
         trades, rej, funnel = res.trades, dict(res.rejections), dict(res.funnel)
         span = max((f.index[-1] - f.index[0]).total_seconds() for f in frames.values()) / 86400
         checks = behaviour.evaluate(trades, signals, n_signal_symbols=len(n_sig_symbols), rejections=rej, funnel=funnel,

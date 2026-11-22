@@ -72,6 +72,9 @@ class MemoryStore:
         self.positions[i] = {"id": i, "run": run_id, "status": "open", **fields}
         return i
 
+    def entered_signal_keys(self, run_id):
+        return {p["signal_obj"].key for p in self.positions.values() if p["run"] == run_id and p.get("signal_obj") is not None}
+
     def update_position(self, position_id, **fields):
         self.positions[position_id].update(fields)
 

@@ -110,6 +110,14 @@ class RiskEngine:
         total = open_risk(after, L.gap_allowance)
         rule("open_risk_within_limit", total <= snap.equity * L.max_open_risk,
              f"{total:.4f} vs {snap.equity * L.max_open_risk:.4f}")
+        if L.max_exposure is not None:
+            exposure = sum((p.value for p in after), Decimal(0))
+            rule("portfolio_exposure_within_limit", exposure <= snap.equity * L.max_exposure,
+                 f"{exposure:.4f} vs {snap.equity * L.max_exposure:.4f}")
+        if L.max_symbol_exposure is not None:
+            sym_exp = sum((p.value for p in after if p.symbol == proposal.symbol), Decimal(0))
+            rule("market_exposure_within_limit", sym_exp <= snap.equity * L.max_symbol_exposure,
+                 f"{sym_exp:.4f} vs {snap.equity * L.max_symbol_exposure:.4f}")
         cluster = snap.cluster_of(proposal.symbol)
         in_cluster = [p for p in after if snap.cluster_of(p.symbol) == cluster]
         c_risk = open_risk(in_cluster, L.gap_allowance)
