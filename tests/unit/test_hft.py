@@ -308,3 +308,27 @@ def test_ws_rotates_to_the_next_host_after_a_failed_connection():
     w = BybitWs(["X"], lambda e: None, connect=connect, sleep=fast)
     asyncio.run(w.run(stop))
     assert len(set(tried)) == 2 and tried[0] != tried[1] and tried[0] == tried[2]
+
+
+def test_restart_with_holdings_before_first_quote_does_not_halt_and_keeps_true_rate():
+    e = make_engine(cfg=HftConfig(max_drawdown=0.10), strategies={"always": Always(target=500.0, stop=500.0, hold=999)})
+    t = drive(e, "ABC", 3, lambda s, tt: 100.0)
+    assert e.positions
+    eq_live = e.equity()
+    snap = json.loads(json.dumps(e.snapshot()))
+    e2 = make_engine(cfg=HftConfig(max_drawdown=0.10), strategies={})
+    e2.restore(snap)
+    e2.on_timer(t + 5)                                    # no quote has arrived yet: holdings have no live price
+    assert not e2.halt and abs(e2.equity() - eq_live) < 0.05
+    drive(e2, "ABC", 2, lambda s, tt: 100.0, t0=t + 6)
+    assert not e2.halt and e2.max_dd < 0.02
+
+
+def test_trade_rate_counts_time_from_earlier_sessions():
+    e = make_engine(strategies={"always": Always(target=40.0)}, cfg=HftConfig(cooldown_s=1.0))
+    t = drive(e, "A", 30, lambda s, tt: 100.0 * (1 + 0.0012 * (tt % 6)))
+    snap = json.loads(json.dumps(e.snapshot()))
+    e2 = make_engine(strategies={})
+    e2.restore(snap)
+    e2.first_ts = e2.last_ts = t + 3600
+    assert e2.summary(t + 3600 + 30)["hours"] > 0.008

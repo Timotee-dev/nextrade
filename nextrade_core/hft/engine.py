@@ -117,6 +117,9 @@ class HftEngine:
         self.proc_ns_total = 0
         self.proc_ns_max = 0
         self.recent: list[dict] = []
+        self.marks: dict[str, float] = {}      # last known bid per symbol, so holdings stay valued before the first quote after a restart
+        self.prev_active_s = 0.0
+        self.session_events = 0
 
     # ------------------------------------------------------------------ small helpers
     def fees_bps(self) -> float:
@@ -130,9 +133,18 @@ class HftEngine:
         for sym, qty in self.ex.holdings.items():
             if qty > 1e-12:
                 st = self.market.state.get(sym)
-                if st is not None and st.bid > 0:
-                    eq += qty * st.bid
+                px = st.bid if st is not None and st.bid > 0 else self.marks.get(sym, 0.0)
+                eq += qty * px
         return eq
+
+    def priced(self) -> bool:
+        """True once every held asset has a live quote. Portfolio loss limits are only judged on live prices."""
+        for sym, qty in self.ex.holdings.items():
+            if qty > 1e-12:
+                st = self.market.state.get(sym)
+                if st is None or st.bid <= 0:
+                    return False
+        return True
 
     def exposure(self) -> float:
         tot = 0.0
@@ -151,6 +163,9 @@ class HftEngine:
         if not self.first_ts:
             self.first_ts = now
         self.last_ts = now
+        self.session_events += 1
+        if isinstance(ev, Quote):
+            self.marks[st.symbol] = st.bid
         self.stats["quotes" if isinstance(ev, Quote) else "trades"] += 1
         for f in self.ex.process(st, now, ev if isinstance(ev, Trade) else None):
             self._on_fill(f, st, now)
@@ -173,6 +188,8 @@ class HftEngine:
                 self._on_fill(f, st, now)
             if sym in self.positions:
                 self._manage(self.positions[sym], st, now)
+        if not self.priced():
+            return                                 # restart warm-up: judge losses only on live prices, never on missing quotes
         eq = self.equity()
         day = utc_day(now)
         if day != self.day:
@@ -413,7 +430,8 @@ class HftEngine:
         now = now or self.last_ts
         n = self.stats["closed"]
         s = self.sums
-        hours = max((now - self.first_ts) / 3600.0, 1e-9) if self.first_ts else 0.0
+        active = self.prev_active_s + ((now - self.first_ts) if self.first_ts else 0.0)
+        hours = max(active / 3600.0, 1e-9) if active else 0.0
         eq = self.equity()
         return {
             "equity": eq, "initial_equity": self.initial_equity, "net": s["net"], "gross": s["gross"], "fees": s["fees"],
@@ -426,7 +444,7 @@ class HftEngine:
             "quotes": self.stats["quotes"], "trades_seen": self.stats["trades"], "scans": self.stats["scans"],
             "signals": self.stats["signals"], "signals_by": dict(self.signals_by), "rejects": dict(self.rejects),
             "exits": dict(self.exits), "entries": self.stats["entries"],
-            "avg_event_us": self.proc_ns_total / max(1, self.stats["quotes"] + self.stats["trades"]) / 1000.0,
+            "avg_event_us": self.proc_ns_total / max(1, self.session_events) / 1000.0,
             "max_event_us": self.proc_ns_max / 1000.0, "halt": self.halt, "pause_day": self.pause_day,
             "by_strategy": {k: dict(v) for k, v in self.by_strategy.items()},
         }
@@ -435,6 +453,7 @@ class HftEngine:
         return {"cash": self.ex.cash, "holdings": dict(self.ex.holdings), "peak_equity": self.peak_equity,
                 "initial_equity": self.initial_equity, "day": self.day, "day_start_equity": self.day_start_equity,
                 "halt": self.halt, "pause_day": self.pause_day, "max_dd": self.max_dd, "sums": dict(self.sums),
+                "marks": dict(self.marks), "active_s": self.prev_active_s + ((self.last_ts - self.first_ts) if self.first_ts else 0.0),
                 "stats": dict(self.stats), "exits": dict(self.exits), "max_open": self.max_open,
                 "positions": [asdict(p) for p in self.positions.values() if p.state == "open"]}
 
@@ -448,6 +467,8 @@ class HftEngine:
         self.stats.update(snap.get("stats", {}))
         self.exits.update(snap.get("exits", {}))
         self.max_open = snap.get("max_open", 0)
+        self.marks = dict(snap.get("marks", {}))
+        self.prev_active_s = float(snap.get("active_s", 0.0))
         for d in snap.get("positions", []):
             p = Position(**d)
             p.exiting, p.exit_id, p.target_id = "", "", ""       # in-flight orders do not survive a restart: re-issued on the first quote

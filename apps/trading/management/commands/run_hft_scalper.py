@@ -77,6 +77,7 @@ class Command(BaseCommand):
         parser.add_argument("--max-seconds", type=float, default=0)
         parser.add_argument("--summary-every", type=float, default=600.0)
         parser.add_argument("--digest-every", type=float, default=5.0, help="seconds between Telegram status lines (0 = off)")
+        parser.add_argument("--clear-halt", action="store_true", help="release a latched drawdown halt (keeps cash and history)")
         parser.add_argument("--new-account", action="store_true", help="ignore the saved state and start from the full capital")
 
     @staticmethod
@@ -138,6 +139,14 @@ class Command(BaseCommand):
             self.stdout.write("Check complete. Nothing started. Start with: python manage.py run_hft_scalper")
             return
 
+        if o["clear_halt"] and runtime.state_path(base).exists():
+            import json
+            snap = json.loads(runtime.state_path(base).read_text())
+            snap.update(halt="", pause_day=0, max_dd=0.0)
+            if not any(v > 1e-12 for v in snap.get("holdings", {}).values()):
+                snap["peak_equity"] = snap["cash"]
+            runtime.atomic_write(runtime.state_path(base), json.dumps(snap))
+            self.stdout.write("Halt released (cash and history kept).")
         lock = runtime.lock_path(base)
         if lock.exists() and time.time() - lock.stat().st_mtime < 120:
             raise CommandError("another HFT scalper is running (stop it: python manage.py stop_hft_scalper)")

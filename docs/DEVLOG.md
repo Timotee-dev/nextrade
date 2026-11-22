@@ -440,3 +440,6 @@ real Milestone 0 result.
   while `hft_status` (or an editor/AV) has the status file open; the exception killed the housekeeping task, which also hosts the stop-file
   watcher. Fixed: atomic_write retries then writes in place and never raises; the housekeeping and timer loops catch and log errors per step.
 - Alert rows are written on a worker thread (Django ORM is not allowed on the asyncio thread).
+- Bug (first live trades): after a restart the engine valued restored holdings at 0 until each market's first quote, saw a false 77% drawdown,
+  latched the drawdown halt and flattened. Fixed: last known marks are kept in the snapshot and used as a fallback; loss limits are judged only
+  once every held asset has a live quote (`priced()`). Trade rate now includes earlier sessions' active time. `--clear-halt` releases a latch.
