@@ -105,3 +105,46 @@ def test_tick_recorder_prunes_and_throttles(tmp_path: Path):
     assert r.written == 2
     f = next(tmp_path.glob("*.gz"))
     assert len(gzip.open(f, "rt").read().splitlines()) == 2
+
+
+def test_runtime_sends_telegram_digest(tmp_path: Path):
+    from services.hft.notifier import TelegramNotifier
+    sent = []
+    n = TelegramNotifier(lambda c, t: sent.append(t) or True, {1}, batch_s=0.05)
+
+    class Idle:
+        stats = {}
+        def __init__(self, *a, **k): pass
+        async def run(self, stop): await stop.wait()
+
+    asyncio.run(runtime.run(tmp_path, ["X"], {}, 27.0, HftConfig(), ws_factory=lambda s, cb: Idle(), record_ticks=False,
+                            resume=False, telegram=n, digest_every_s=0.5, max_seconds=3.0))
+    n.close()
+    assert any("open 0" in m and "equity 27.0000" in m for m in sent)
+
+
+def test_runtime_telegram_gets_open_and_close_messages(tmp_path: Path, monkeypatch):
+    import sys
+    sys.path.insert(0, str(Path(__file__).parents[1] / "unit"))
+    from test_hft import Always
+    from nextrade_core.hft.events import Quote
+    from services.hft.notifier import TelegramNotifier
+    monkeypatch.setattr(runtime, "make_all", lambda: {"always": Always(target=500.0, stop=500.0, hold=1.0)})
+    sent = []
+    n = TelegramNotifier(lambda c, t: sent.append(t) or True, {1}, batch_s=0.05)
+
+    class Feed:
+        stats = {}
+        def __init__(self, syms, cb): self.cb = cb
+        async def run(self, stop):
+            while not stop.is_set():
+                self.cb(Quote("X", time.time(), 99.99, 100.01, 500, 500))
+                await asyncio.sleep(0.05)
+
+    import time
+    asyncio.run(runtime.run(tmp_path, ["X"], {"X": InstrumentRules(0.0001, 0.0001, 1.0)}, 27.0, HftConfig(cooldown_s=0.5),
+                            ws_factory=lambda s, cb: Feed(s, cb), record_ticks=False, resume=False, telegram=n,
+                            digest_every_s=0, max_seconds=5.0))
+    n.close()
+    text = "\n".join(sent)
+    assert "OPENED X" in text and "CLOSED X" in text and "NET" in text

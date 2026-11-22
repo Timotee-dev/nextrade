@@ -63,6 +63,7 @@ class Command(BaseCommand):
         parser.add_argument("--check", action="store_true")
         parser.add_argument("--max-seconds", type=float, default=0)
         parser.add_argument("--summary-every", type=float, default=600.0)
+        parser.add_argument("--digest-every", type=float, default=5.0, help="seconds between Telegram status lines (0 = off)")
         parser.add_argument("--new-account", action="store_true", help="ignore the saved state and start from the full capital")
 
     @staticmethod
@@ -132,6 +133,17 @@ class Command(BaseCommand):
         runtime.stop_path(base).unlink(missing_ok=True)
         paper_runner.clear_old_alerts(datetime.now(UTC))
         tg = None
+        notifier = None
+        if tg_ok:
+            from apps.notify.management.commands.run_telegram_bot import settings_from_env
+            from apps.notify.telegram import TelegramClient
+            from services.hft.notifier import TelegramNotifier
+            token, chats, _pin = settings_from_env()
+            client_tg = TelegramClient(token)
+            notifier = TelegramNotifier(client_tg.send, set(chats))
+            notifier.push("NEXTRADE HFT paper scalper started (simulated money, real prices). "
+                          f"{len(top)} markets, account {cash} USDT. You will get a message for every open and close, "
+                          f"and a status line every {o['digest_every']:g} s.")
         if tg_ok:
             logs = base / "logs" / "hft"
             logs.mkdir(parents=True, exist_ok=True)
@@ -153,7 +165,8 @@ class Command(BaseCommand):
                     t0 = time.monotonic()
                     try:
                         await runtime.run(base, top, rules, cash, cfg, notify=notify, summary_every_s=o["summary_every"],
-                                          max_seconds=left, resume=not o["new_account"])
+                                          max_seconds=left, resume=not o["new_account"],
+                                          telegram=notifier, digest_every_s=o["digest_every"])
                         break
                     except Exception:                      # noqa: BLE001  restart from the saved state
                         logging.getLogger("hft").exception("engine crashed; restarting")
@@ -169,6 +182,9 @@ class Command(BaseCommand):
         except KeyboardInterrupt:
             self.stdout.write("Ctrl+C: stopped. Open paper positions are saved and resume on the next start.")
         finally:
+            if notifier:
+                notifier.push("HFT paper scalper stopped. Open paper positions are saved.")
+                notifier.close()
             if tg:
                 tg.terminate()
             lock.unlink(missing_ok=True)

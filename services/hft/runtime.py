@@ -18,6 +18,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from adapters.bybit.ws import BybitWs
+from services.hft import notifier as tg
 from nextrade_core.hft.engine import HftConfig, HftEngine
 from nextrade_core.hft.events import Quote, Trade
 from nextrade_core.hft.exchange import InstrumentRules, PaperExchange
@@ -140,10 +141,24 @@ def summary_text(s: dict, label: str = "HFT paper scalper") -> str:
 async def run(base: Path, symbols: list[str], rules: dict[str, InstrumentRules], cash: float, cfg: HftConfig, *,
               ws_factory: Callable[..., BybitWs] | None = None, summary_every_s: float = 600.0, snapshot_every_s: float = 5.0,
               notify: Callable[[str, str, str], None] | None = None, max_seconds: float = 0.0, record_ticks: bool = True,
-              resume: bool = True) -> HftEngine:
+              resume: bool = True, telegram: tg.TelegramNotifier | None = None, digest_every_s: float = 5.0) -> HftEngine:
     folder = base / "logs" / "hft"
     tlog = TradeLog(folder)
-    engine = build_engine(cfg, symbols, rules, cash, tlog)
+    holder: dict = {}
+
+    def sink(rec: dict) -> None:
+        tlog(rec)
+        if telegram is None:
+            return
+        if rec["type"] == "open":
+            telegram.push(tg.open_text(rec))
+        elif rec["type"] == "close":
+            telegram.push(tg.close_text(rec, holder["engine"].summary(rec["ts"])))
+        elif rec["type"] in ("halt", "pause"):
+            telegram.push(("HALT: " if rec["type"] == "halt" else "PAUSE: ") + rec["reason"])
+
+    engine = build_engine(cfg, symbols, rules, cash, sink)
+    holder["engine"] = engine
     sp = state_path(base)
     if resume and sp.exists():
         try:
@@ -171,7 +186,7 @@ async def run(base: Path, symbols: list[str], rules: dict[str, InstrumentRules],
             tlog.pending_alerts.clear()
 
     async def housekeeping():
-        last_sum = last_snap = time.monotonic()
+        last_sum = last_snap = last_dig = time.monotonic()
         while not stop.is_set():
             await asyncio.sleep(1.0)
             if stop_path(base).exists():
@@ -185,6 +200,9 @@ async def run(base: Path, symbols: list[str], rules: dict[str, InstrumentRules],
             st.update(feed=ws.stats, written_ticks=rec.written if rec else 0, symbols=len(symbols), ts=time.time(),
                       cfg=cfg.__dict__)
             atomic_write(status_path(base), json.dumps(st, default=str))
+            if telegram is not None and digest_every_s and m - last_dig >= digest_every_s:
+                last_dig = m
+                telegram.push(tg.digest_text(st, engine.open_views()))
             if m - last_snap >= snapshot_every_s:
                 last_snap = m
                 atomic_write(sp, json.dumps(engine.snapshot()))

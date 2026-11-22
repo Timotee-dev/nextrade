@@ -397,6 +397,18 @@ class HftEngine:
             pos.exit_n += 1
 
     # ------------------------------------------------------------------ reporting + restart
+    def open_views(self) -> list[dict]:
+        out = []
+        for p in self.positions.values():
+            if p.state != "open":
+                continue
+            st = self.market.state[p.symbol]
+            notional = p.entry_fill * p.qty
+            net = self.net_if_sold(p, st) if st.bid > 0 else 0.0
+            out.append({"symbol": p.symbol, "strategy": p.strategy, "net": net, "net_bps": net / notional * 1e4 if notional else 0.0,
+                        "age_s": self.last_ts - p.opened_ts})
+        return out
+
     def summary(self, now: float | None = None) -> dict[str, Any]:
         now = now or self.last_ts
         n = self.stats["closed"]

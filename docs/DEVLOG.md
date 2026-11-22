@@ -433,3 +433,6 @@ real Milestone 0 result.
   27 USDT = 2.2 USDT) was under Bybit's minimum order. Fixed: positions are lifted to the exchange minimum (cap 25% of equity). With ~27 USDT
   this limits concurrency to about 5 positions. The process also stopped updating its status after a few minutes; the launcher now disables
   the Windows QuickEdit console mode (a click in the window freezes a running program).
+- Telegram: `services/hft/notifier.py` sends a message for every open (bought qty/price, target, stop, reason) and every close (sold price,
+  reason, gross, fees, net, hold time, running totals) plus a status line every `--digest-every` seconds (default 5). Sent straight from the
+  scalper in a background thread (the old outbox can lag up to 25 s).
