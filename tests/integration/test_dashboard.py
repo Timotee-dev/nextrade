@@ -93,3 +93,14 @@ def test_empty_state_renders(client):
         url = f"/dashboard/{'' if page == 'overview' else page + '/'}"
         assert client.get(url).status_code == 200
     assert "No paper run yet" in client.get("/dashboard/").content.decode()
+
+
+def test_logo_and_favicon_on_every_page(client):
+    from django.contrib.staticfiles import finders
+    User.objects.create_user("op", password="pw-long-enough-123")
+    client.login(username="op", password="pw-long-enough-123")
+    for page in PAGES:
+        html = client.get(f"/dashboard/{'' if page == 'overview' else page + '/'}").content.decode()
+        assert 'alt="NEXTRADE logo"' in html and 'rel="icon"' in html and "/static/dashboard/logo.svg" in html
+    path = finders.find("dashboard/logo.svg")
+    assert path and open(path).read().lstrip().startswith("<svg")

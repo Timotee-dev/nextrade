@@ -69,7 +69,9 @@ def test_real_account_warning(monkeypatch, capsys):
     assert "REAL account" in capsys.readouterr().out
 
 
-def test_run_backtest_on_mt5_forex_data(fake, capsys):
+def test_run_backtest_on_mt5_forex_data(fake, capsys, monkeypatch):
+    from django.utils import timezone
+    monkeypatch.setattr(timezone, "now", lambda: NOW)      # spreads are "the last 7 days" before the fake clock
     call_command("load_mt5_history", symbols="EURUSD,USDJPY", timeframes="1h", years=0.25, suffix="c")
     capsys.readouterr()
     call_command("run_backtest", venue="mt5", timeframe="1h", strategies="breakout",

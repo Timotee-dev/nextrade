@@ -1,6 +1,27 @@
 # NEXTRADE development log
 
+## 2026-11-22 Telegram token fix
+- Operator's .env held only the bot id (no `:secret`): Telegram answered 404 forever and the bot retried in a tight loop.
+  Now: token format is checked before any call (clear message), 401/404 stop the bot with a clear error, instant empty
+  replies back off up to 60 s. 3 new tests.
+
+## 2026-11-22 Scalping engine framework (ADR 0012) and audit (docs/AUDIT.md)
+- Built on the existing multi-position daemon instead of beside it. New: 3m timeframe, 1h context for fast bars
+  (closed bars only), six pre-registered scalp strategies, net-profit exits, capital feasibility (N40,000 about $27),
+  re-entry guard, approvals + `approve_strategy`, `scan_scalp`, `scalp_report`, `run_scalper` (live refused).
+- Paper/Telegram close alert now shows gross before fees, fees, NET and duration.
+- Fixed: a test depended on the real date (measured spreads window); `scan_scalp` now says when data is stale.
+- Tests: 483 passing (42 new). Not done: real-data backtests of the scalp strategies, a Gate live market source,
+  a live broker (Phase 14), drift monitoring, recorder hardening (see AUDIT.md).
+
+
 Newest first.
+
+## 2026-11-14 · Dashboard logo
+
+Original NEXTRADE mark (blue rounded square, white N whose right stroke is an up arrow, green
+dot) as `apps/dashboard/static/dashboard/logo.svg`: shown in the dashboard header on every
+page, used as the browser-tab icon, and in the README (`docs/logo.svg`). **Tests**: 441 passing.
 
 ## 2026-11-12 · Fast crypto at Gate.io costs fails; Quidax microstructure recorder built
 
@@ -384,3 +405,8 @@ real Milestone 0 result.
 
 **Decisions**: ADR 0001 (modular monolith), 0002 (native Binance client),
 0003 (Decimal money).
+
+
+## 2026-11-22: scalping validation harness
+- Added Bybit public-data adapter, `probe_venues`, `load_bybit_history` (top-30 universe), `record_rest` (REST recorder with real bid/ask samples), `validate_scalping` (1m/3m/5m, dev + hold-out, trades/day, net, win rate, PF, max drawdown, concurrency), approvals carry a timeframe, `run_trader --venue`.
+- No exchange is reachable from the build sandbox: results come from running the commands on the operator's machine. No strategy is claimed profitable until that output exists.

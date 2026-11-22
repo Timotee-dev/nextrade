@@ -107,6 +107,14 @@ class GateClient:
         bid, ask = rows[0].get("highest_bid"), rows[0].get("lowest_ask")
         return (bid, ask) if bid and ask else None
 
+    def quotes(self) -> dict[str, tuple[str, str]]:
+        """Best (bid, ask) of every spot pair in one call, keyed like BTCUSDT."""
+        out = {}
+        for t in self._get("/spot/tickers"):
+            if t.get("highest_bid") and t.get("lowest_ask"):
+                out[t["currency_pair"].replace("_", "")] = (t["highest_bid"], t["lowest_ask"])
+        return out
+
     def candles(self, symbol: str, tf: Timeframe, start: datetime, end: datetime) -> list[Candle]:
         """Closed bars with open_time in [start, end), paged 1,000 at a time, oldest first."""
         out: dict[datetime, Candle] = {}

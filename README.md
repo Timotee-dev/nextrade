@@ -1,5 +1,7 @@
 # NEXTRADE AI
 
+<img src="docs/logo.svg" width="64" alt="NEXTRADE logo">
+
 A research-driven crypto and forex trading platform. It starts as a crypto-only
 research system on Binance spot. No live money goes in until a strategy shows a
 positive out-of-sample net expectancy after costs.

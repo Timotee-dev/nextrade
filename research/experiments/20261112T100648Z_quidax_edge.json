@@ -1,0 +1,489 @@
+{
+  "written_at": "20261112T100648Z",
+  "git_commit": "e0475d5",
+  "since": "2026-11-05 10:06:48.313207+00:00",
+  "params": {
+    "taker_fee": 0.0015,
+    "maker_fee": 0.0015,
+    "order_ngn": 1250.0,
+    "max_inventory_ngn": 6250.0
+  },
+  "markets": {
+    "BTCNGN": {
+      "gap": {
+        "summary": {
+          "snapshots": 31,
+          "hours": 0.1,
+          "gap_median_bps": 5.9,
+          "gap_p05_bps": 3.7,
+          "gap_p95_bps": 8.4,
+          "spread_median_bps": 49.2,
+          "round_trip_cost_median_bps": 79.2,
+          "share_gap_beyond_cost": 0.0
+        },
+        "sweep": [
+          {
+            "k_bps": 25,
+            "trades": 0,
+            "mean_net_bps": null,
+            "win_rate": null,
+            "total_net_bps": 0.0
+          },
+          {
+            "k_bps": 50,
+            "trades": 0,
+            "mean_net_bps": null,
+            "win_rate": null,
+            "total_net_bps": 0.0
+          },
+          {
+            "k_bps": 75,
+            "trades": 0,
+            "mean_net_bps": null,
+            "win_rate": null,
+            "total_net_bps": 0.0
+          },
+          {
+            "k_bps": 100,
+            "trades": 0,
+            "mean_net_bps": null,
+            "win_rate": null,
+            "total_net_bps": 0.0
+          },
+          {
+            "k_bps": 150,
+            "trades": 0,
+            "mean_net_bps": null,
+            "win_rate": null,
+            "total_net_bps": 0.0
+          },
+          {
+            "k_bps": 200,
+            "trades": 0,
+            "mean_net_bps": null,
+            "win_rate": null,
+            "total_net_bps": 0.0
+          }
+        ]
+      },
+      "market_making": {
+        "bid_fills": 0,
+        "ask_fills": 0,
+        "round_trips": 0,
+        "spread_earned_ngn": 0.0,
+        "inventory_pnl_ngn": 0,
+        "net_ngn": 0.0,
+        "max_inventory_ngn": 0.0,
+        "days": 0.003
+      }
+    },
+    "DASHNGN": {
+      "gap": {
+        "summary": {
+          "snapshots": 31,
+          "hours": 0.1,
+          "gap_median_bps": 11.8,
+          "gap_p05_bps": -10.0,
+          "gap_p95_bps": 20.9,
+          "spread_median_bps": 49.9,
+          "round_trip_cost_median_bps": 79.9,
+          "share_gap_beyond_cost": 0.0
+        },
+        "sweep": [
+          {
+            "k_bps": 25,
+            "trades": 0,
+            "mean_net_bps": null,
+            "win_rate": null,
+            "total_net_bps": 0.0
+          },
+          {
+            "k_bps": 50,
+            "trades": 0,
+            "mean_net_bps": null,
+            "win_rate": null,
+            "total_net_bps": 0.0
+          },
+          {
+            "k_bps": 75,
+            "trades": 0,
+            "mean_net_bps": null,
+            "win_rate": null,
+            "total_net_bps": 0.0
+          },
+          {
+            "k_bps": 100,
+            "trades": 0,
+            "mean_net_bps": null,
+            "win_rate": null,
+            "total_net_bps": 0.0
+          },
+          {
+            "k_bps": 150,
+            "trades": 0,
+            "mean_net_bps": null,
+            "win_rate": null,
+            "total_net_bps": 0.0
+          },
+          {
+            "k_bps": 200,
+            "trades": 0,
+            "mean_net_bps": null,
+            "win_rate": null,
+            "total_net_bps": 0.0
+          }
+        ]
+      },
+      "market_making": {
+        "bid_fills": 0,
+        "ask_fills": 0,
+        "round_trips": 0,
+        "spread_earned_ngn": 0.0,
+        "inventory_pnl_ngn": 0,
+        "net_ngn": 0.0,
+        "max_inventory_ngn": 0.0,
+        "days": 0.003
+      }
+    },
+    "ETHNGN": {
+      "gap": {
+        "summary": {
+          "snapshots": 31,
+          "hours": 0.1,
+          "gap_median_bps": 5.9,
+          "gap_p05_bps": 3.8,
+          "gap_p95_bps": 9.8,
+          "spread_median_bps": 49.8,
+          "round_trip_cost_median_bps": 79.8,
+          "share_gap_beyond_cost": 0.0
+        },
+        "sweep": [
+          {
+            "k_bps": 25,
+            "trades": 0,
+            "mean_net_bps": null,
+            "win_rate": null,
+            "total_net_bps": 0.0
+          },
+          {
+            "k_bps": 50,
+            "trades": 0,
+            "mean_net_bps": null,
+            "win_rate": null,
+            "total_net_bps": 0.0
+          },
+          {
+            "k_bps": 75,
+            "trades": 0,
+            "mean_net_bps": null,
+            "win_rate": null,
+            "total_net_bps": 0.0
+          },
+          {
+            "k_bps": 100,
+            "trades": 0,
+            "mean_net_bps": null,
+            "win_rate": null,
+            "total_net_bps": 0.0
+          },
+          {
+            "k_bps": 150,
+            "trades": 0,
+            "mean_net_bps": null,
+            "win_rate": null,
+            "total_net_bps": 0.0
+          },
+          {
+            "k_bps": 200,
+            "trades": 0,
+            "mean_net_bps": null,
+            "win_rate": null,
+            "total_net_bps": 0.0
+          }
+        ]
+      },
+      "market_making": {
+        "bid_fills": 0,
+        "ask_fills": 0,
+        "round_trips": 0,
+        "spread_earned_ngn": 0.0,
+        "inventory_pnl_ngn": 0,
+        "net_ngn": 0.0,
+        "max_inventory_ngn": 0.0,
+        "days": 0.003
+      }
+    },
+    "LTCNGN": {
+      "gap": {
+        "summary": {
+          "snapshots": 31,
+          "hours": 0.1,
+          "gap_median_bps": 4.7,
+          "gap_p05_bps": -0.4,
+          "gap_p95_bps": 7.3,
+          "spread_median_bps": 50.1,
+          "round_trip_cost_median_bps": 80.1,
+          "share_gap_beyond_cost": 0.0
+        },
+        "sweep": [
+          {
+            "k_bps": 25,
+            "trades": 0,
+            "mean_net_bps": null,
+            "win_rate": null,
+            "total_net_bps": 0.0
+          },
+          {
+            "k_bps": 50,
+            "trades": 0,
+            "mean_net_bps": null,
+            "win_rate": null,
+            "total_net_bps": 0.0
+          },
+          {
+            "k_bps": 75,
+            "trades": 0,
+            "mean_net_bps": null,
+            "win_rate": null,
+            "total_net_bps": 0.0
+          },
+          {
+            "k_bps": 100,
+            "trades": 0,
+            "mean_net_bps": null,
+            "win_rate": null,
+            "total_net_bps": 0.0
+          },
+          {
+            "k_bps": 150,
+            "trades": 0,
+            "mean_net_bps": null,
+            "win_rate": null,
+            "total_net_bps": 0.0
+          },
+          {
+            "k_bps": 200,
+            "trades": 0,
+            "mean_net_bps": null,
+            "win_rate": null,
+            "total_net_bps": 0.0
+          }
+        ]
+      },
+      "market_making": {
+        "bid_fills": 0,
+        "ask_fills": 0,
+        "round_trips": 0,
+        "spread_earned_ngn": 0.0,
+        "inventory_pnl_ngn": 0,
+        "net_ngn": 0.0,
+        "max_inventory_ngn": 0.0,
+        "days": 0.003
+      }
+    },
+    "SOLNGN": {
+      "gap": {
+        "summary": {
+          "snapshots": 31,
+          "hours": 0.1,
+          "gap_median_bps": 5.2,
+          "gap_p05_bps": -0.0,
+          "gap_p95_bps": 10.5,
+          "spread_median_bps": 50.0,
+          "round_trip_cost_median_bps": 80.0,
+          "share_gap_beyond_cost": 0.0
+        },
+        "sweep": [
+          {
+            "k_bps": 25,
+            "trades": 0,
+            "mean_net_bps": null,
+            "win_rate": null,
+            "total_net_bps": 0.0
+          },
+          {
+            "k_bps": 50,
+            "trades": 0,
+            "mean_net_bps": null,
+            "win_rate": null,
+            "total_net_bps": 0.0
+          },
+          {
+            "k_bps": 75,
+            "trades": 0,
+            "mean_net_bps": null,
+            "win_rate": null,
+            "total_net_bps": 0.0
+          },
+          {
+            "k_bps": 100,
+            "trades": 0,
+            "mean_net_bps": null,
+            "win_rate": null,
+            "total_net_bps": 0.0
+          },
+          {
+            "k_bps": 150,
+            "trades": 0,
+            "mean_net_bps": null,
+            "win_rate": null,
+            "total_net_bps": 0.0
+          },
+          {
+            "k_bps": 200,
+            "trades": 0,
+            "mean_net_bps": null,
+            "win_rate": null,
+            "total_net_bps": 0.0
+          }
+        ]
+      },
+      "market_making": {
+        "bid_fills": 0,
+        "ask_fills": 0,
+        "round_trips": 0,
+        "spread_earned_ngn": 0.0,
+        "inventory_pnl_ngn": 0,
+        "net_ngn": 0.0,
+        "max_inventory_ngn": 0.0,
+        "days": 0.003
+      }
+    },
+    "TRXNGN": {
+      "gap": {
+        "summary": {
+          "snapshots": 31,
+          "hours": 0.1,
+          "gap_median_bps": 5.8,
+          "gap_p05_bps": 4.2,
+          "gap_p95_bps": 10.5,
+          "spread_median_bps": 46.9,
+          "round_trip_cost_median_bps": 76.9,
+          "share_gap_beyond_cost": 0.0
+        },
+        "sweep": [
+          {
+            "k_bps": 25,
+            "trades": 0,
+            "mean_net_bps": null,
+            "win_rate": null,
+            "total_net_bps": 0.0
+          },
+          {
+            "k_bps": 50,
+            "trades": 0,
+            "mean_net_bps": null,
+            "win_rate": null,
+            "total_net_bps": 0.0
+          },
+          {
+            "k_bps": 75,
+            "trades": 0,
+            "mean_net_bps": null,
+            "win_rate": null,
+            "total_net_bps": 0.0
+          },
+          {
+            "k_bps": 100,
+            "trades": 0,
+            "mean_net_bps": null,
+            "win_rate": null,
+            "total_net_bps": 0.0
+          },
+          {
+            "k_bps": 150,
+            "trades": 0,
+            "mean_net_bps": null,
+            "win_rate": null,
+            "total_net_bps": 0.0
+          },
+          {
+            "k_bps": 200,
+            "trades": 0,
+            "mean_net_bps": null,
+            "win_rate": null,
+            "total_net_bps": 0.0
+          }
+        ]
+      },
+      "market_making": {
+        "bid_fills": 0,
+        "ask_fills": 0,
+        "round_trips": 0,
+        "spread_earned_ngn": 0.0,
+        "inventory_pnl_ngn": 0,
+        "net_ngn": 0.0,
+        "max_inventory_ngn": 0.0,
+        "days": 0.003
+      }
+    },
+    "XRPNGN": {
+      "gap": {
+        "summary": {
+          "snapshots": 31,
+          "hours": 0.1,
+          "gap_median_bps": 2.6,
+          "gap_p05_bps": -4.8,
+          "gap_p95_bps": 7.3,
+          "spread_median_bps": 48.6,
+          "round_trip_cost_median_bps": 78.6,
+          "share_gap_beyond_cost": 0.0
+        },
+        "sweep": [
+          {
+            "k_bps": 25,
+            "trades": 0,
+            "mean_net_bps": null,
+            "win_rate": null,
+            "total_net_bps": 0.0
+          },
+          {
+            "k_bps": 50,
+            "trades": 0,
+            "mean_net_bps": null,
+            "win_rate": null,
+            "total_net_bps": 0.0
+          },
+          {
+            "k_bps": 75,
+            "trades": 0,
+            "mean_net_bps": null,
+            "win_rate": null,
+            "total_net_bps": 0.0
+          },
+          {
+            "k_bps": 100,
+            "trades": 0,
+            "mean_net_bps": null,
+            "win_rate": null,
+            "total_net_bps": 0.0
+          },
+          {
+            "k_bps": 150,
+            "trades": 0,
+            "mean_net_bps": null,
+            "win_rate": null,
+            "total_net_bps": 0.0
+          },
+          {
+            "k_bps": 200,
+            "trades": 0,
+            "mean_net_bps": null,
+            "win_rate": null,
+            "total_net_bps": 0.0
+          }
+        ]
+      },
+      "market_making": {
+        "bid_fills": 0,
+        "ask_fills": 0,
+        "round_trips": 0,
+        "spread_earned_ngn": 0.0,
+        "inventory_pnl_ngn": 0,
+        "net_ngn": 0.0,
+        "max_inventory_ngn": 0.0,
+        "days": 0.003
+      }
+    }
+  }
+}

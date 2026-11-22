@@ -1,6 +1,6 @@
 # NEXTRADE status
 
-Last updated: 2026-11-11 (T1 passed; Quidax paper trading)
+Last updated: 2026-11-22 (scalping engine framework built; no scalp strategy tested on real data yet)
 
 | Stage | Phase | Status |
 | --- | --- | --- |
@@ -22,9 +22,10 @@ Last updated: 2026-11-11 (T1 passed; Quidax paper trading)
 | Forex | FX1-FX7 all FAIL (ADR 0007-0009); search closed 2026-11-12 | No forex strategy approved |
 | Crypto fast | trend/meanrev/breakout at Gate.io costs FAIL (ADR 0010) | Ruled out |
 | Microstructure | Quidax book recorder + gap / market-making analysis (ADR 0011) | Recording 2-4 weeks |
+| Scalping | Strategies A-F, MTF context, net-profit exits, capital check, re-entry guard, approvals, scanner, analytics (ADR 0012) | Built; 483 tests pass. NOT yet backtested on real data. Research only until a gate pass + `approve_strategy` |
 | Capacity | 100 trades/day per market | Not yet load-tested |
 
-Tests: 440 passing, 94% line coverage. Phases 4-13 were first built in an earlier
+Tests: 483 passing. Phases 4-13 were first built in an earlier
 session whose log entries were lost; see the DEVLOG recovery note.
 
 ## Open items for the operator
@@ -35,3 +36,15 @@ session whose log entries were lost; see the DEVLOG recovery note.
 - Forex: no approved strategy. The Exness demo can stay; nothing runs on it.
 - Keep `.venv\\Scripts\\python manage.py record_books` running 2-4 weeks, then run
   `analyze_quidax_edge --days 14` and share the output.
+
+## Scalping engine: what to run (research mode, no orders)
+1. `load_gate_history --timeframes 5m,15m,1h` (or your usual Gate loader options) for the pairs you want.
+2. `run_backtest --venue gate --costs gate --timeframe 5m --strategies scalp_momentum,scalp_trend,scalp_meanrev,scalp_breakout,scalp_short`
+   and `--timeframe 15m --strategies scalp_vol`. Share the output; failures are recorded, not tuned (ADR 0012).
+3. `scan_scalp --venue gate --capital 27` shows what the rules would do right now, with reasons.
+4. Only after a PASS: `approve_strategy <code>`, then `run_scalper --mode paper`.
+Live stays disabled: no live broker exists and it needs NEXTRADE_LIVE_ENABLED=yes plus a separate authorisation.
+
+
+## Validation (2026-11-22)
+Harness built and tested on synthetic data. Real evidence pending: run probe_venues, load_bybit_history --top 30 --days 30, validate_scalping. Paper trading starts only for approved strategies.

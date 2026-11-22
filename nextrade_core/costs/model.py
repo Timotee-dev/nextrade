@@ -57,6 +57,9 @@ VENUE_COSTS = {
     "mt5": dict(fee_rate=0.0, spread_bps=2.0, slippage_bps=0.5),
     # Gate.io spot, standard tier: 0.2% per side (taker); tight books on major USDT pairs.
     "gate": dict(fee_rate=0.002, spread_bps=2.0, slippage_bps=2.0),
+    # Bybit spot, standard tier: 0.1% per side taker. Alt-coin spreads are wider than BTC's, so 4 bps spread
+    # and 3 bps slippage per side are assumed until the recorder has measured real spreads (record_rest).
+    "bybit": dict(fee_rate=0.001, spread_bps=4.0, slippage_bps=3.0),
 }
 SPREAD_MULTIPLIER = {"mt5": 2.0}
 

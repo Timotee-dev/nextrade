@@ -213,7 +213,12 @@ class TradingDaemon:
                                   realized_pnl=pnl, fees=dec(p.get("entry_fee", 0)) + fee)
         self.funnel["positions_closed"] += 1
         self.funnel["net_winners" if pnl > 0 else "net_losers"] += 1
-        self.store.alert("info", "position_closed", f"{p['symbol']} closed by {reason}, P&L {pnl:.4f} {self.cfg.quote_asset}")
+        costs = dec(p.get("entry_fee", 0)) + fee
+        opened = p.get("opened_at")
+        held = f", held {int((now - opened).total_seconds() // 60)} min" if opened else ""
+        self.store.alert("info", "position_closed",
+                         f"{p['symbol']} closed by {reason} ({p.get('strategy', '?')}): gross before fees "
+                         f"{pnl + costs:.4f}, fees {costs:.4f}, NET {pnl:.4f} {self.cfg.quote_asset}{held} [paper]")
 
     async def _exit_now(self, p: dict, reason: str) -> None:
         for leg in ("tp", "sl"):

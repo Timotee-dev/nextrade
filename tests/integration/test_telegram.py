@@ -126,7 +126,7 @@ def test_outbox_delivery_levels_and_retries():
 def test_bot_command_once(monkeypatch, capsys):
     from apps.notify.management.commands import run_telegram_bot as cmd
     sent = []
-    monkeypatch.setattr(cmd, "settings_from_env", lambda: ("t", {ME}, "246810"))
+    monkeypatch.setattr(cmd, "settings_from_env", lambda: ("9288490637:" + "A" * 35, {ME}, "246810"))
     monkeypatch.setattr(cmd, "TelegramClient", lambda token: tg.TelegramClient(token, transport=fake_telegram(sent)))
     call_command("run_telegram_bot", once=True)
     assert sent and "Pause new entries" in sent[0]["text"]
@@ -141,3 +141,40 @@ def test_send_report_queues_alert(capsys):
     call_command("send_report", period="weekly")
     a = Alert.objects.get(kind="report_weekly")
     assert "3 trades closed" in a.message and "2 winners" in a.message
+
+
+# ------------------------------------------------------------------ token problems stop clearly
+def test_bot_refuses_a_half_token_without_calling_telegram(monkeypatch):
+    from django.core.management.base import CommandError
+    monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "9288490637")             # only the bot id, no secret
+    monkeypatch.setenv("TELEGRAM_ALLOWED_CHAT_IDS", str(ME))
+    monkeypatch.setenv("TELEGRAM_PIN", "123456")
+    with pytest.raises(CommandError, match="not a full bot token.*no colon"):
+        call_command("run_telegram_bot", once=True)
+
+
+def test_telegram_404_means_bad_token_and_stops_instead_of_looping(monkeypatch):
+    from django.core.management.base import CommandError
+    calls = []
+
+    def handler(request):
+        calls.append(request.url.path)
+        return httpx.Response(404, json={"ok": False, "error_code": 404})
+
+    class Client(tg.TelegramClient):
+        def __init__(self, token):
+            super().__init__(token, transport=httpx.MockTransport(handler))
+
+    from apps.notify.management.commands import run_telegram_bot as cmd
+    monkeypatch.setattr(cmd, "TelegramClient", Client)
+    monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "9288490637:" + "A" * 35)
+    monkeypatch.setenv("TELEGRAM_ALLOWED_CHAT_IDS", str(ME))
+    monkeypatch.setenv("TELEGRAM_PIN", "123456")
+    with pytest.raises(CommandError, match="rejected the bot token"):
+        call_command("run_telegram_bot")
+    assert len(calls) == 1                                  # one request, then a clear stop
+
+
+def test_good_token_format_is_accepted():
+    assert tg.TOKEN_FORMAT.match("9288490637:" + "Ab_-" * 9)
+    assert not tg.TOKEN_FORMAT.match("9288490637") and not tg.TOKEN_FORMAT.match("9288490637:short")

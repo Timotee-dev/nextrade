@@ -36,15 +36,15 @@ class Command(BaseCommand):
     help = "Walk-forward backtest with costs, baselines and the go/no-go decision gate."
 
     def add_arguments(self, parser):
-        parser.add_argument("--venue", default=settings.NEXTRADE["VENUE"], choices=["quidax", "binance", "gate", "mt5"],
+        parser.add_argument("--venue", default=settings.NEXTRADE["VENUE"], choices=["quidax", "binance", "gate", "mt5", "bybit"],
                             help="where the price history comes from")
-        parser.add_argument("--costs", default=None, choices=["quidax", "binance", "mt5", "gate"],
+        parser.add_argument("--costs", default=None, choices=["quidax", "binance", "mt5", "gate", "bybit"],
                             help="whose fees and spreads to charge (default: quidax for gate data, else the venue)")
         parser.add_argument("--ngn-per-usdt", default=None,
                             help="rate for Quidax-cost research on USDT data (default: latest stored USDT/NGN, else 1400)")
         parser.add_argument("--symbols", default=None)
         parser.add_argument("--strategies", default=",".join(TRADABLE))
-        parser.add_argument("--timeframe", default="15m", choices=[t.value for t in Timeframe if t is not Timeframe.M1])
+        parser.add_argument("--timeframe", default="15m", choices=[t.value for t in Timeframe])
         parser.add_argument("--model", default="hitrate", choices=MODEL_KINDS)
         parser.add_argument("--start", help="YYYY-MM-DD (default: earliest stored data)")
         parser.add_argument("--end", help="YYYY-MM-DD (default: now)")

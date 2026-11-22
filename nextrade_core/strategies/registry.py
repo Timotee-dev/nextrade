@@ -2,13 +2,15 @@ from .baseline import RandomEntry
 from .breakout import Breakout
 from .forex import FxLondon, FxLondonAI, FxMeanRev, FxSweep, FxTrend, FxTsmom, FxXsmom
 from .mean_reversion import MeanReversion
+from .scalp import SCALP_CLASSES, SCALP_TIMEFRAMES
 from .rotation import MomentumRotation
 from .trend import TrendFollowing
 from .trend_filter import TrendFilter
 
 STRATEGIES = {cls.code: cls for cls in (TrendFollowing, MeanReversion, Breakout, RandomEntry, TrendFilter,
                                         MomentumRotation, FxTrend, FxMeanRev, FxLondon,
-                                        FxSweep, FxTsmom, FxXsmom, FxLondonAI)}
+                                        FxSweep, FxTsmom, FxXsmom, FxLondonAI, *SCALP_CLASSES)}
+SCALP_PREREGISTERED = SCALP_TIMEFRAMES                    # ADR 0012: research only until approved
 TRADABLE = ("trend", "meanrev", "breakout")
 PREREGISTERED = ("trendfilter", "rotation")   # ADR 0006
 FOREX_PREREGISTERED = {"fx_trend": "1h", "fx_meanrev": "1h", "fx_london": "15m",      # ADR 0007: failed

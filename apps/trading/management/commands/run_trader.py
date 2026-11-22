@@ -20,7 +20,7 @@ from apps.trading.models import TradingRun
 from apps.trading.store import DjangoMarketSource, DjangoTradingStore, OffLoop, ControlPoller
 from nextrade_core.clock import WallClock
 from nextrade_core.controller.state_machine import Actor, TradingState
-from nextrade_core.costs.model import CostModel
+from nextrade_core.costs.model import CostModel, cost_model_for
 from nextrade_core.data.candles import Timeframe
 from nextrade_core.nara.engine import RiskEngine
 from nextrade_core.strategies.registry import TRADABLE, make
@@ -32,6 +32,8 @@ class Command(BaseCommand):
 
     def add_arguments(self, parser):
         parser.add_argument("--mode", default="paper", choices=["paper", "live"])
+        parser.add_argument("--venue", default="binance", choices=["binance", "bybit", "gate"],
+                            help="whose recorded candles/quotes and cost model to use (bybit/gate: run record_rest)")
         parser.add_argument("--new-run", action="store_true")
         parser.add_argument("--capital", default="1000", help="paper starting cash in USDT (new runs)")
         parser.add_argument("--symbols", default=None)
@@ -47,7 +49,7 @@ class Command(BaseCommand):
             raise CommandError(f"Trading is halted ({last_state()}). Review, then run: "
                                "python manage.py acknowledge_halt --reason \"...\"")
         tf = Timeframe(o["timeframe"])
-        qs = Instrument.objects.filter(venue="binance", tradable=True)
+        qs = Instrument.objects.filter(venue=o["venue"], tradable=True)
         if o["symbols"]:
             qs = qs.filter(symbol__in=[s.strip().upper() for s in o["symbols"].split(",")])
         instruments = {i.symbol: i for i in qs}
@@ -64,12 +66,17 @@ class Command(BaseCommand):
             self.stdout.write(f"Resuming paper run {run.pk}")
 
         clock = WallClock()
-        costs = CostModel()
+        costs = cost_model_for(o["venue"]) if o["venue"] != "binance" else CostModel()
         strategies = {c: make(c) for c in o["strategies"].split(",") if c}
         candle_store = CandleStore(instruments)
         from apps.research.registry import production_ensemble
-        naia, sources = hit_rate_naia(candle_store, strategies, sorted(instruments), tf, costs,
+        rule_based = [c for c, st in strategies.items() if getattr(st, "judged_raw", False)]
+        model_based = {c: st for c, st in strategies.items() if c not in rule_based}
+        naia, sources = hit_rate_naia(candle_store, model_based, sorted(instruments), tf, costs,
                                       model_lookup=production_ensemble)
+        naia.mark_rule_based(rule_based)       # rule-based strategies are judged on raw trades (ADR 0006)
+        for code in rule_based:
+            sources[code] = "rule-based (risk engine and cost checks still apply)"
         for code, src in sources.items():
             self.stdout.write(f"  NAIA {code}: {src}")
 

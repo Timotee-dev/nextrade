@@ -172,4 +172,6 @@ def prune_correlated(features: pd.DataFrame, columns: list[str] | None = None,
 
 def with_features(df: pd.DataFrame, timeframe: Timeframe, params: FeatureParams | None = None) -> pd.DataFrame:
     """OHLCV plus every feature column, on the same index (the frame strategies read)."""
-    return df.join(build_features(df, timeframe, params))
+    out = df.join(build_features(df, timeframe, params))
+    from nextrade_core.scalping.mtf import add_htf_context, wants_htf   # fast bars also read 1h context
+    return add_htf_context(out, timeframe) if wants_htf(timeframe) else out

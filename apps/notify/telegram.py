@@ -17,6 +17,8 @@ import secrets
 from dataclasses import dataclass, field
 from datetime import timedelta
 
+import re
+
 import httpx
 from django.utils import timezone
 
@@ -39,6 +41,13 @@ class Reply:
     extras: dict = field(default_factory=dict)
 
 
+class TelegramAuthError(Exception):
+    """The bot token is wrong or revoked."""
+
+
+TOKEN_FORMAT = re.compile(r"^\d{6,}:[A-Za-z0-9_-]{30,}$")
+
+
 class TelegramClient:
     def __init__(self, token: str, transport: httpx.BaseTransport | None = None) -> None:
         self._http = httpx.Client(base_url=f"{API}/bot{token}", timeout=35, transport=transport)
@@ -55,10 +64,17 @@ class TelegramClient:
             return False
 
     def updates(self, offset: int | None, timeout_s: int = 25) -> list[dict]:
+        """New updates. Raises TelegramAuthError when Telegram says the token is wrong (401/404:
+        retrying can never work); returns [] on temporary network or server trouble."""
         try:
             r = self._http.get("/getUpdates", params={"offset": offset, "timeout": timeout_s})
+        except httpx.HTTPError:
+            return []
+        if r.status_code in (401, 404):
+            raise TelegramAuthError("Telegram rejected the bot token (HTTP %d)." % r.status_code)
+        try:
             return r.json().get("result", [])
-        except (httpx.HTTPError, ValueError):
+        except ValueError:
             return []
 
     def answer_callback(self, callback_id: str, text: str) -> None:
