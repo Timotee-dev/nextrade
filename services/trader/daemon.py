@@ -73,13 +73,14 @@ class TradingDaemon:
     def __init__(self, cfg: DaemonConfig, *, source: MarketSource, broker, store: TradingStore,
                  strategies: dict[str, Strategy], naia: Naia, risk: RiskEngine, costs: CostModel,
                  instruments: dict[str, Instrument], controller: TradingStateMachine, clock,
-                 execution: ExecutionEngine | None = None, controls=None) -> None:
+                 execution: ExecutionEngine | None = None, controls=None, reentry=None) -> None:
         self.cfg, self.source, self.broker, self.store = cfg, source, broker, store
         self.strategies, self.naia, self.risk, self.costs = strategies, naia, risk, costs
         self.instruments, self.controller, self.clock = instruments, controller, clock
         self.exec = execution or ExecutionEngine(broker, on_event=self._on_order_event)
         # callable returning [(target_state, actor, reason)] requested by other processes
         self.controls = controls
+        self.reentry = reentry          # optional ReentryGuard (scalping)
         self.last_bar: datetime | None = None
         self.funnel = Funnel()
         self.peak = self.day_start = self.week_start = None
@@ -212,6 +213,10 @@ class TradingDaemon:
         self.store.close_position(p["id"], closed_at=now, exit_price=price, exit_reason=reason,
                                   realized_pnl=pnl, fees=dec(p.get("entry_fee", 0)) + fee)
         self.funnel["positions_closed"] += 1
+        if self.reentry is not None:
+            sg = p.get("signal_obj")           # the database store keeps no signal object: use the entry time
+            self.reentry.record_close(p["symbol"], p.get("strategy", ""), sg.sign if sg is not None else 1, float(pnl), now,
+                                      pd.Timestamp(sg.bar_time if sg is not None else p.get("opened_at") or now).to_pydatetime())
         self.funnel["net_winners" if pnl > 0 else "net_losers"] += 1
         costs = dec(p.get("entry_fee", 0)) + fee
         opened = p.get("opened_at")
@@ -277,6 +282,11 @@ class TradingDaemon:
                     if pd.Timestamp(sig.bar_time) != last_bar:
                         continue
                     self.funnel["signals"] += 1
+                    if self.reentry is not None:
+                        ok, _why = self.reentry.check(sym, sig.strategy, sig.sign, pd.Timestamp(sig.bar_time).to_pydatetime(), now)
+                        if not ok:
+                            self.funnel["rejected_by_reentry"] += 1
+                            continue
                     regime = f["regime"].iloc[-1]
                     sid = self.store.record_signal(self.cfg.run_id, sig, regime)
                     q = self.source.latest_quote(sym)

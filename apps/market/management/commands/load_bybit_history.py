@@ -19,10 +19,12 @@ from django.core.management.base import BaseCommand, CommandError
 
 from adapters.base import VenueError
 from adapters.bybit.client import BybitClient, pick_top_usdt
+from apps.market.coverage import check_pairs
 from apps.market.models import Instrument
 from apps.market.services import save_instrument
 from apps.market.store import CandleStore
 from nextrade_core.data.candles import Timeframe
+from nextrade_core.data.coverage import Thresholds
 
 now_utc = lambda: datetime.now(UTC)  # noqa: E731
 make_bybit = lambda: BybitClient()  # noqa: E731
@@ -35,6 +37,8 @@ class Command(BaseCommand):
         parser.add_argument("--top", type=int, default=30)
         parser.add_argument("--symbols", default=None, help="comma list, e.g. BTCUSDT,ETHUSDT (overrides --top)")
         parser.add_argument("--days", type=float, default=30)
+        parser.add_argument("--min-days", type=float, default=21,
+                            help="a pair counts as loaded only with this many days of nearly gap-free bars")
 
     def handle(self, *args, **o):
         now = now_utc()
@@ -85,12 +89,21 @@ class Command(BaseCommand):
                     self.stdout.write(self.style.ERROR(f"  {s}: FAILED after retries: {exc}"))
                     continue
                 self.stdout.write(f"  {s}: {total:,} new 1m bars")
+            insufficient: list[str] = []
+            th = Thresholds(min_days=o["min_days"], max_age_hours=6)
+            for r in check_pairs([store.instruments[s] for s in symbols if s not in failed], now, window_days=o["days"] + 1, th=th):
+                if not r.usable:
+                    insufficient.append(r.symbol)
+                    self.stdout.write(self.style.WARNING(f"  {r.symbol}: NOT sufficient: " + "; ".join(r.reasons)))
         finally:
             client.close()
-        ok = len(symbols) - len(failed)
-        if failed:
+        ok = len(symbols) - len(failed) - len(insufficient)
+        if failed or insufficient:
             self.stdout.write(self.style.WARNING(
-                f"{ok} of {len(symbols)} pairs loaded. FAILED: {', '.join(failed)}. Run the same command again: "
-                "it only fetches what is missing."))
+                f"{ok} of {len(symbols)} pairs loaded with sufficient valid data. "
+                + (f"FAILED downloads: {', '.join(failed)}. " if failed else "")
+                + (f"Too little or incomplete data: {', '.join(insufficient)}. " if insufficient else "")
+                + "Run the same command again to retry failures; new listings may simply have too little history."))
         else:
-            self.stdout.write(self.style.SUCCESS(f"All {ok} pairs loaded. Next: validate_scalping --venue bybit"))
+            self.stdout.write(self.style.SUCCESS(f"All {ok} pairs loaded with sufficient valid data. "
+                                                 "Next: check_data --venue bybit, then validate_scalping."))

@@ -82,11 +82,13 @@ class Backtester:
     def __init__(self, frames: dict[str, pd.DataFrame], instruments: dict[str, Instrument],
                  costs: CostModel, risk: RiskEngine, initial_cash: Decimal = Decimal(1000), *,
                  scorer: Scorer | None = None, exit_policy: ExitPolicy | None = None,
-                 clusters: dict[str, str] | None = None, leverage: Decimal = Decimal(1)) -> None:
+                 clusters: dict[str, str] | None = None, leverage: Decimal = Decimal(1),
+                 reentry=None) -> None:
         self.frames, self.instruments = frames, instruments
         self.costs, self.risk = costs, risk
         self.initial_cash = Decimal(initial_cash)
         self.scorer, self.exit_policy = scorer, exit_policy
+        self.reentry = reentry          # optional ReentryGuard (scalping): cooldowns, flips, loss streaks, stale signals
         self.margin = any(i.asset_class is AssetClass.FOREX for i in instruments.values())
         self.leverage = Decimal(leverage) if self.margin else Decimal(1)
         self.clusters = clusters or {s: ("forex" if self.margin else "crypto") for s in frames}
@@ -157,6 +159,9 @@ class Backtester:
                 cash += proceeds - fee
                 pnl = proceeds - fee - (p.qty * p.fill + p.entry_fee)
             consecutive_losses = consecutive_losses + 1 if pnl < 0 else 0
+            if self.reentry is not None:
+                self.reentry.record_close(sym, p.signal.strategy, p.sign, float(pnl), pd.Timestamp(when).to_pydatetime(),
+                                          pd.Timestamp(p.signal.decision_time).to_pydatetime())
             trades.append({
                 "symbol": sym, "strategy": p.signal.strategy, "signal_key": p.signal.key,
                 "side": "long" if p.sign > 0 else "short",
@@ -188,6 +193,12 @@ class Backtester:
                     continue
                 o = arrays[sym][1][i]
                 sg = sig.sign
+                if self.reentry is not None:
+                    ok, _why = self.reentry.check(sym, sig.strategy, sg, pd.Timestamp(sig.decision_time).to_pydatetime(),
+                                                  T.to_pydatetime())
+                    if not ok:
+                        rejections["skip:reentry_guard"] += 1
+                        continue
                 if sg < 0 and not self.margin:
                     rejections["skip:short_needs_margin_account"] += 1
                     continue

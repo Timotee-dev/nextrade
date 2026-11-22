@@ -85,3 +85,47 @@ def sustains_frequency(dev_gate_pass: bool, dev: dict, hold: dict | None, hold_g
         if hold.get("trades_per_day", 0) < min_per_day:
             why.append(f"hold-out only {hold.get('trades_per_day', 0):.1f} trades/day")
     return (not why), why
+
+
+def add_costs(trades: pd.DataFrame, costs) -> pd.DataFrame:
+    """Adds per-trade: gross (before fees and spread/slippage), friction (estimated spread + slippage paid), hold_min.
+
+    Fees are exact (recorded by the simulator). Friction is an ESTIMATE rebuilt from the cost model
+    (half spread each side, slippage on entry and on market exits; target exits pay no slippage).
+    """
+    if trades.empty:
+        return trades
+    t = trades.copy()
+    q, fill, ex = (t[c].astype(float) for c in ("qty", "fill", "exit"))
+    sp = t["symbol"].map(costs.spread).astype(float)
+    slip = costs.slippage_bps / 10_000
+    exit_slip = pd.Series(np.where(t["reason"] == "target", 0.0, slip), index=t.index)
+    t["friction"] = q * fill * (sp / 2 + slip) + q * ex * (sp / 2 + exit_slip)
+    t["gross"] = t["pnl"].astype(float) + t["fees"].astype(float) + t["friction"]
+    t["hold_min"] = (pd.to_datetime(t["exit_time"]) - pd.to_datetime(t["entry_time"])).dt.total_seconds() / 60
+    return t
+
+
+def breakdown(trades: pd.DataFrame, days: float, initial_cash: float) -> dict:
+    """Detailed numbers for one group of costed trades (see add_costs)."""
+    m = measure(trades, days, initial_cash)
+    if trades.empty:
+        return {**m, "gross_profit": 0.0, "gross_loss": 0.0, "gross_pnl": 0.0, "friction": 0.0, "avg_hold_min": 0.0,
+                "avg_win": 0.0, "avg_loss": 0.0}
+    pnl_g = trades["gross"].astype(float)
+    pnl = trades["pnl"].astype(float)
+    m.update({"gross_profit": float(pnl_g[pnl_g > 0].sum()), "gross_loss": float(pnl_g[pnl_g <= 0].sum()),
+              "gross_pnl": float(pnl_g.sum()), "friction": float(trades["friction"].sum()),
+              "avg_hold_min": float(trades["hold_min"].mean()),
+              "avg_win": float(pnl[pnl > 0].mean()) if (pnl > 0).any() else 0.0,
+              "avg_loss": float(pnl[pnl <= 0].mean()) if (pnl <= 0).any() else 0.0})
+    return m
+
+
+def by_pair(trades: pd.DataFrame, days: float, initial_cash: float) -> list[dict]:
+    if trades.empty or "symbol" not in trades:
+        return []
+    rows = []
+    for sym, g in trades.groupby("symbol"):
+        rows.append({"symbol": sym, **breakdown(g, days, initial_cash)})
+    return sorted(rows, key=lambda r: -r["net_pnl"])

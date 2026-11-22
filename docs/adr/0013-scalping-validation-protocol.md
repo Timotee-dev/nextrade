@@ -31,3 +31,13 @@ A short history is a weak sample. Executed trades/day are below signals/day beca
 ## Paper trading
 Only strategies approved by `approve_strategy --timeframe` (needs a recorded gate pass) run in `run_scalper --mode paper --venue bybit`,
 fed by `record_rest`. Live trading stays disabled.
+
+## Addendum 2026-11-22: what the audit of the engine found
+- The re-entry guard, the net-profit exit and the capital check had been built but were used only by the scanner. The guard is now
+  wired (opt-in) into the simulator and the trader loop, and `validate_scalping` runs with it on. The net-profit exit
+  (`should_take_profit`) is NOT wired into the simulator or the trader loop: exits are fixed stop, fixed target and time limit.
+  `verify_scalping_behaviour` reports this as a failed wiring check rather than hiding it.
+- Dataset gate: `check_data` / `validate_scalping` exclude any pair with under 21 days, under 98% of bars, a gap over 120 minutes,
+  invalid OHLCV rows or stale data, and print why. There is no switch to include them anyway.
+- Roughly half of the generated signals are shorts, which spot cannot trade; they are counted as signals but skipped.
+- One position per instrument at a time (no stacking on the same pair); many instruments at once.

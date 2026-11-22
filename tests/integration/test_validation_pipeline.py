@@ -184,7 +184,8 @@ def test_validate_scalping_reports_every_measure_and_never_calls_noise_profitabl
     assert "signals" in out and "/day" in out
     assert "No strategy passed" in out                                  # random walk: no edge after costs
     reports = list((tmp_path / "research" / "validation").glob("scalping-*"))
-    assert {p.suffix for p in reports} == {".json", ".md"}
+    assert {p.suffix for p in reports} == {".json", ".md", ".csv"}
+    assert list((tmp_path / "research" / "validation").glob("data-quality-*.md"))
     md = next(p for p in reports if p.suffix == ".md").read_text()
     assert "survivorship" in md and "tests were run" in md
     row = ExperimentRun.objects.get(kind="scalp_validation")
@@ -195,7 +196,7 @@ def test_validate_scalping_needs_enough_history(monkeypatch, settings, tmp_path)
     settings.BASE_DIR = tmp_path
     end = seed_bybit("AAAUSDT", 5, 3)
     monkeypatch.setattr(validate_scalping, "now_utc", lambda: end)
-    with pytest.raises(CommandError, match="Load more history"):
+    with pytest.raises(CommandError, match="enough clean data"):
         call_command("validate_scalping", venue="bybit", timeframes="5m")
     with pytest.raises(CommandError, match="No stored gate"):
         call_command("validate_scalping", venue="gate")
@@ -258,7 +259,7 @@ def test_load_reports_failed_pairs_honestly(monkeypatch, settings, tmp_path, cap
                         lambda: BybitClient(transport=httpx.MockTransport(handler), min_interval_s=0, sleep=lambda s: None))
     call_command("load_bybit_history", top=2, days=0.1)
     out = capsys.readouterr().out
-    assert "1 of 2 pairs loaded" in out and "ETHUSDT" in out and "All 2 pairs" not in out
+    assert "pairs loaded with sufficient valid data" in out and "FAILED downloads: ETHUSDT" in out and "All 2 pairs" not in out
 
 
 def test_pegged_tokens_are_not_in_the_universe_and_validation_skips_them(monkeypatch, settings, tmp_path, capsys):
@@ -271,3 +272,56 @@ def test_pegged_tokens_are_not_in_the_universe_and_validation_skips_them(monkeyp
     call_command("validate_scalping", venue="bybit", timeframes="5m", strategies="scalp_momentum",
                  holdout_days=6, train_days=5, test_days=3, min_trades=10)
     assert "1 symbols on bybit" in capsys.readouterr().out
+
+
+def test_loader_does_not_call_a_thin_pair_loaded(monkeypatch, settings, tmp_path, capsys):
+    settings.BASE_DIR = tmp_path
+    monkeypatch.setattr(load_bybit_history, "now_utc", lambda: datetime(2026, 3, 1, 12, 0, tzinfo=UTC))
+    monkeypatch.setattr(load_bybit_history, "make_bybit",
+                        lambda: BybitClient(transport=httpx.MockTransport(kline_handler), min_interval_s=0, sleep=lambda s: None))
+    call_command("load_bybit_history", top=2, days=2)          # only 2 days downloaded: far below the 21-day minimum
+    out = capsys.readouterr().out
+    assert "NOT sufficient" in out and "only 2 days of history" in out and "All 2 pairs loaded" not in out
+    assert "0 of 2 pairs loaded with sufficient valid data" in out
+
+
+def test_validate_scalping_excludes_incomplete_pairs_and_says_so(monkeypatch, settings, tmp_path, capsys):
+    settings.BASE_DIR = tmp_path
+    end = seed_bybit("AAAUSDT", 24, 3)
+    seed_bybit("THINUSDT", 5, 4)                                # five days only
+    inst = Instrument.objects.get(symbol="AAAUSDT")
+    CandleRow.objects.filter(instrument=inst, open_time__gte=T0 + timedelta(days=10),
+                             open_time__lt=T0 + timedelta(days=10, hours=6)).delete()   # a 6-hour hole
+    seed_bybit("HOLEUSDT", 24, 5)
+    hole = Instrument.objects.get(symbol="HOLEUSDT")
+    CandleRow.objects.filter(instrument=hole, open_time__gte=T0 + timedelta(days=9),
+                             open_time__lt=T0 + timedelta(days=9, hours=5)).delete()
+    monkeypatch.setattr(validate_scalping, "now_utc", lambda: end)
+    monkeypatch.setattr("apps.market.management.commands.check_data.now_utc", lambda: end)
+    with pytest.raises(CommandError, match="No pair has enough clean data|Load more"):
+        call_command("validate_scalping", venue="bybit", timeframes="5m", strategies="scalp_momentum",
+                     holdout_days=6, train_days=5, test_days=3, symbols="THINUSDT,HOLEUSDT,AAAUSDT")
+    out = capsys.readouterr().out
+    assert "EXCLUDED THINUSDT" in out and "EXCLUDED HOLEUSDT" in out and "EXCLUDED AAAUSDT" in out
+    assert "a gap of 360 minutes" in out and "only 5 days of history" in out
+
+
+def test_check_data_report_counts_gaps_duplicates_invalid_and_sufficiency(monkeypatch, settings, tmp_path, capsys):
+    settings.BASE_DIR = tmp_path
+    end = seed_bybit("AAAUSDT", 24, 3)
+    inst = Instrument.objects.get(symbol="AAAUSDT")
+    CandleRow.objects.filter(instrument=inst, open_time__gte=T0 + timedelta(days=10),
+                             open_time__lt=T0 + timedelta(days=10, minutes=30)).delete()
+    bad = CandleRow.objects.filter(instrument=inst).order_by("open_time")[500]
+    bad.high, bad.low = Decimal("1"), Decimal("2")                 # high below low: invalid
+    bad.save()
+    monkeypatch.setattr("apps.market.management.commands.check_data.now_utc", lambda: end)
+    call_command("check_data", venue="bybit", min_days=21)
+    out = capsys.readouterr().out
+    assert "gaps   1 (max 30 min)" in out and "invalid 1" in out and "dupes 0" in out and "USABLE" in out
+    rep = json.loads(next((tmp_path / "research" / "validation").glob("data-quality-*.json")).read_text())
+    p = rep["pairs"][0]
+    assert p["missing"] == 30 and p["invalid"] == {"high_below_low": 1, "open_or_close_outside_range": 1}
+    assert p["bars_by_tf"]["5m"] > 0 and p["ok_by_tf"] == {"1m": True, "3m": True, "5m": True}
+    call_command("check_data", venue="bybit", min_days=40)
+    assert "EXCLUDED" in capsys.readouterr().out

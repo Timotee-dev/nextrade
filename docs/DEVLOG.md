@@ -410,3 +410,10 @@ real Milestone 0 result.
 ## 2026-11-22: scalping validation harness
 - Added Bybit public-data adapter, `probe_venues`, `load_bybit_history` (top-30 universe), `record_rest` (REST recorder with real bid/ask samples), `validate_scalping` (1m/3m/5m, dev + hold-out, trades/day, net, win rate, PF, max drawdown, concurrency), approvals carry a timeframe, `run_trader --venue`.
 - No exchange is reachable from the build sandbox: results come from running the commands on the operator's machine. No strategy is claimed profitable until that output exists.
+
+## 2026-11-22 (later): validation prerequisites
+- Loader retries network errors and reports a pair as loaded only with 21+ days of >=98% complete bars.
+- `check_data` (coverage, gaps, duplicates, invalid OHLCV, 1m/3m/5m sufficiency) feeds a hard gate in `validate_scalping`.
+- `validate_scalping`: per strategy/timeframe/pair gross, fees, estimated spread+slippage, net, win rate, PF, max drawdown, average hold, peak open positions; CSV by pair.
+- Re-entry guard wired (opt-in) into Backtester and TradingDaemon. Net-profit exit still unwired (recorded in ADR 0013).
+- `verify_scalping_behaviour`: mechanical checks of simultaneous positions, auto exits, fresh signals, cooldown, continuous scanning.

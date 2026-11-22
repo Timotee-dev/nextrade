@@ -23,6 +23,8 @@ import pandas as pd
 from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
 
+from apps.market.coverage import check_pairs
+from apps.market.management.commands.check_data import write_report as write_quality
 from apps.market.models import Instrument
 from apps.market.store import CandleStore
 from apps.research.models import ExperimentRun
@@ -33,7 +35,9 @@ from nextrade_core.data.candles import Timeframe
 from nextrade_core.features.feature_set import FeatureParams, with_features
 from nextrade_core.nara.engine import RiskEngine
 from nextrade_core.nara.limits import RiskLimits, scaled_limits
-from nextrade_core.scalping.validation import covered_days, measure, sustains_frequency
+from nextrade_core.data.coverage import Thresholds
+from nextrade_core.scalping.reentry import ReentryConfig
+from nextrade_core.scalping.validation import (add_costs, breakdown, by_pair, covered_days, sustains_frequency)
 from nextrade_core.strategies.registry import SCALP_PREREGISTERED, make
 
 now_utc = lambda: datetime.now(UTC)  # noqa: E731
@@ -44,16 +48,18 @@ def _sub(frames: dict[str, pd.DataFrame], end: pd.Timestamp | None) -> dict[str,
 
 
 def evaluate(code, frames, domain, costs, risk, cfg):
-    """One strategy run -> (ResearchResult, measured dict)."""
+    """One strategy run -> (ResearchResult, measured dict, per-pair rows)."""
     res = evaluate_strategy(make(code), frames, domain, costs, risk, cfg)
     days = covered_days(res.folds, cfg.holdout_from)
-    return res, measure(res.trades, days, float(cfg.initial_cash))
+    costed = add_costs(res.trades, costs)
+    return res, breakdown(costed, days, float(cfg.initial_cash)), by_pair(costed, days, float(cfg.initial_cash))
 
 
 def _fmt(m: dict) -> str:
     pf = "inf" if m["profit_factor"] == float("inf") else f"{m['profit_factor']:.2f}"
-    return (f"{m['trades']:>5} trades  {m['trades_per_day']:>6.1f}/day  net {m['net_pnl']:>+9.2f} ({m['net_return']:+.1%})  "
-            f"win {m['win_rate']:.1%}  PF {pf}  maxDD {m['max_drawdown']:.1%}  open peak {m['peak_open']} "
+    return (f"{m['trades']:>5} trades  {m['trades_per_day']:>6.1f}/day  gross {m['gross_pnl']:>+9.2f}  fees {m['fees']:.2f}  "
+            f"spread+slip~{m['friction']:.2f}  NET {m['net_pnl']:>+9.2f} ({m['net_return']:+.1%})  win {m['win_rate']:.1%}  "
+            f"PF {pf}  maxDD {m['max_drawdown']:.1%}  avg hold {m['avg_hold_min']:.0f}m  open peak {m['peak_open']} "
             f"mean {m['mean_open']:.1f}  symbols {m['symbols_traded']}")
 
 
@@ -87,6 +93,18 @@ class Command(BaseCommand):
         instruments = {i.symbol: i for i in qs if i.candles.exists() and i.symbol not in skip}
         if not instruments:
             raise CommandError(f"No stored {venue} candles. Run load_{venue}_history first.")
+        th = Thresholds(min_days=o["train_days"] + o["test_days"] + o["holdout_days"] + 1, max_age_hours=12)
+        quality = check_pairs(list(instruments.values()), now_utc(), window_days=o["days"], th=th)
+        qpath = write_quality(quality, th, venue, now_utc())
+        usable = {r.symbol: r for r in quality if r.usable}
+        dropped = [r for r in quality if not r.usable]
+        self.stdout.write(f"Data quality: {len(usable)} of {len(quality)} pairs usable (report {qpath.name}).")
+        for r in dropped:
+            self.stdout.write(self.style.WARNING(f"  EXCLUDED {r.symbol}: " + "; ".join(r.reasons)))
+        if not usable:
+            raise CommandError("No pair has enough clean data. See the data-quality report; load more history.")
+        ok_tf = {tf: {s for s, r in usable.items() if r.ok_by_tf.get(tf)} for tf in ("1m", "3m", "5m")}
+        instruments = {s: i for s, i in instruments.items() if s in usable}
         store = CandleStore(instruments)
         tfs = [Timeframe(t.strip()) for t in o["timeframes"].split(",") if t.strip()]
         codes = [c.strip() for c in o["strategies"].split(",") if c.strip()]
@@ -100,10 +118,11 @@ class Command(BaseCommand):
         limits = scaled_limits(Decimal(o["risk_per_trade"]) if o["risk_per_trade"] else RiskLimits().risk_per_trade,
                                cost_venue)
         risk = RiskEngine(limits)
+        rcfg = ReentryConfig()
         cfg = ResearchConfig(train=pd.Timedelta(days=o["train_days"]), test=pd.Timedelta(days=o["test_days"]),
-                             initial_cash=Decimal(o["capital"]), min_trades=o["min_trades"])
+                             initial_cash=Decimal(o["capital"]), min_trades=o["min_trades"], reentry=rcfg)
         hold_cfg = ResearchConfig(train=cfg.train, test=cfg.test, initial_cash=cfg.initial_cash,
-                                  min_trades=max(30, o["min_trades"] // 3), holdout_from=cutoff)
+                                  min_trades=max(30, o["min_trades"] // 3), holdout_from=cutoff, reentry=rcfg)
         self.stdout.write(f"{len(instruments)} symbols on {venue}; {start:%Y-%m-%d} -> {end:%Y-%m-%d}; "
                           f"hold-out = last {o['holdout_days']:g} days (from {cutoff:%Y-%m-%d %H:%M}), "
                           f"opened only for strategies that pass development.")
@@ -111,6 +130,8 @@ class Command(BaseCommand):
         for tf in tfs:
             frames = {}
             for sym in instruments:
+                if sym not in ok_tf.get(tf.value, set(instruments)):
+                    continue
                 raw = store.load_frame(sym, tf, start, end)
                 if len(raw) > FeatureParams().warmup_bars + 100:
                     frames[sym] = with_features(raw, tf)
@@ -129,21 +150,24 @@ class Command(BaseCommand):
                     self.stdout.write(f"  {code}: {note}")
                     results.append({"strategy": code, "timeframe": tf.value, "skipped": note})
                     continue
-                dev_res, dev = evaluate(code, dev_frames, domain, costs, risk, cfg)
+                dev_res, dev, dev_pairs = evaluate(code, dev_frames, domain, costs, risk, cfg)
                 row = {"strategy": code, "timeframe": tf.value, "signals_per_day": dev_res.diagnostics.get("signals_per_day"),
                        "dev": dev, "dev_gate": dev_res.gate, "baseline_trades": dev_res.baseline_summary.get("trades", 0),
                        "baseline_mean_r": dev_res.baseline_summary.get("expectancy_r"),
                        "funnel": _sum_dicts(f.get("funnel", {}) for f in dev_res.folds),
                        "rejections": _sum_dicts(f.get("rejections", {}) for f in dev_res.folds),
-                       "hold": None, "hold_gate": None}
-                self.stdout.write(f"  {code}: signals {row['signals_per_day']}/day")
+                       "dev_pairs": dev_pairs, "symbols_tested": len(frames), "hold": None, "hold_gate": None,
+                       "hold_pairs": None}
+                top_rej = sorted(row["rejections"].items(), key=lambda kv: -kv[1])[:3]
+                self.stdout.write(f"  {code}: signals {row['signals_per_day']}/day"
+                                  + (f"   skipped: {', '.join(f'{k} x{v}' for k, v in top_rej)}" if top_rej else ""))
                 self.stdout.write(f"    development: {_fmt(dev)}")
                 self.stdout.write(f"    gate: {'PASS' if dev_res.gate['pass'] else 'FAIL'}"
                                   + ("" if dev_res.gate["pass"] else "  - " + "; ".join(dev_res.gate["reasons"])))
                 hold_res = None
                 if dev_res.gate["pass"]:
-                    hold_res, hold = evaluate(code, frames, domain, costs, risk, hold_cfg)
-                    row["hold"], row["hold_gate"] = hold, hold_res.gate
+                    hold_res, hold, hold_pairs = evaluate(code, frames, domain, costs, risk, hold_cfg)
+                    row["hold"], row["hold_gate"], row["hold_pairs"] = hold, hold_res.gate, hold_pairs
                     self.stdout.write(f"    HOLD-OUT:    {_fmt(hold)}")
                     self.stdout.write(f"    hold-out gate: {'PASS' if hold_res.gate['pass'] else 'FAIL'}"
                                       + ("" if hold_res.gate["pass"] else "  - " + "; ".join(hold_res.gate["reasons"])))
@@ -180,27 +204,44 @@ class Command(BaseCommand):
         out.mkdir(parents=True, exist_ok=True)
         stamp = datetime.now(UTC).strftime("%Y%m%d-%H%M")
         (out / f"scalping-{stamp}.json").write_text(json.dumps(results, indent=2, default=str))
+        rows = []
+        for r in results:
+            for period, key in (("development", "dev_pairs"), ("hold-out", "hold_pairs")):
+                for pr in r.get(key) or []:
+                    rows.append({"strategy": r["strategy"], "timeframe": r["timeframe"], "period": period, **pr})
+        pd.DataFrame(rows).to_csv(out / f"scalping-{stamp}-by-pair.csv", index=False)
         n_tests = sum(1 for r in results if "skipped" not in r)
         lines = [f"# Scalping validation {stamp} UTC", "",
-                 f"Data: {venue}, {n_sym} pairs, {start:%Y-%m-%d} to {end:%Y-%m-%d}. Costs: {cost_venue} model (fee + spread + slippage "
-                 f"per side). Hold-out: from {cutoff:%Y-%m-%d %H:%M}, opened only for development passers.", "",
-                 "| strategy | tf | signals/day | trades/day | net | win rate | PF | max DD | peak open | dev gate | hold-out | verdict |",
-                 "|---|---|---|---|---|---|---|---|---|---|---|---|"]
+                 f"Data: {venue}, {n_sym} usable pairs, {start:%Y-%m-%d} to {end:%Y-%m-%d}. Costs: {cost_venue} model (fee + spread + "
+                 f"slippage per side). Walk-forward on development data; hold-out from {cutoff:%Y-%m-%d %H:%M}, opened only for "
+                 "development passers. Parameters fixed in advance, never tuned on the hold-out. Re-entry guard on.", "",
+                 "Gross = before fees and spread/slippage. Fees are exact; spread+slippage is estimated from the cost model.", "",
+                 "| strategy | tf | signals/day | trades/day | gross | fees | spread+slip | NET | win | PF | max DD | avg hold | peak open | dev gate | hold-out net / trades/day | verdict |",
+                 "|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|"]
         for r in results:
             if "skipped" in r:
-                lines.append(f"| {r['strategy']} | {r['timeframe']} | - | - | - | - | - | - | - | - | - | skipped |")
+                lines.append(f"| {r['strategy']} | {r['timeframe']} | - | - | - | - | - | - | - | - | - | - | - | - | - | skipped |")
                 continue
             d, h = r["dev"], r["hold"]
-            hold = f"{h['net_return']:+.1%} / {h['trades_per_day']:.0f}/day" if h else "not run"
-            lines.append(f"| {r['strategy']} | {r['timeframe']} | {r['signals_per_day']} | {d['trades_per_day']} | "
-                         f"{d['net_return']:+.1%} | {d['win_rate']:.1%} | {d['profit_factor']:.2f} | {d['max_drawdown']:.1%} | "
-                         f"{d['peak_open']} | {'pass' if r['dev_gate']['pass'] else 'fail'} | {hold} | "
-                         f"{'SUSTAINS' if r['sustains_frequency'] else 'no'} |")
+            hold = f"{h['net_return']:+.1%} / {h['trades_per_day']:.0f}" if h else "not run"
+            lines.append(f"| {r['strategy']} | {r['timeframe']} | {r['signals_per_day']} | {d['trades_per_day']} | {d['gross_pnl']:+.1f} | "
+                         f"{d['fees']:.1f} | {d['friction']:.1f} | {d['net_return']:+.1%} | {d['win_rate']:.1%} | {d['profit_factor']:.2f} | "
+                         f"{d['max_drawdown']:.1%} | {d['avg_hold_min']:.0f}m | {d['peak_open']} | "
+                         f"{'pass' if r['dev_gate']['pass'] else 'fail'} | {hold} | {'SUSTAINS' if r['sustains_frequency'] else 'no'} |")
+        lines += ["", "## Best and worst pairs (development period)"]
+        for r in results:
+            pairs = [p for p in (r.get("dev_pairs") or []) if p["trades"] >= 5]
+            if len(pairs) < 2:
+                continue
+            fmt = lambda p: f"{p['symbol']} {p['net_pnl']:+.1f} ({p['trades']} trades, win {p['win_rate']:.0%})"  # noqa: E731
+            lines.append(f"- {r['strategy']} @ {r['timeframe']}: best " + ", ".join(fmt(p) for p in pairs[:3])
+                         + "; worst " + ", ".join(fmt(p) for p in pairs[-3:]))
         lines += ["", "## Caveats", f"- {n_tests} strategy/timeframe tests were run: some passes can be luck. A pass must "
                   "repeat on fresh data (keep the paper run going) before it is trusted.",
                   "- The pair list is the top by TODAY'S turnover: survivorship/selection bias flatters results.",
                   "- Fills are simulated with assumed spreads/slippage until the recorder has measured real ones.",
-                  "- Executed trades/day are lower than signals/day because risk limits and minimum sizes reject some.",
+                  "- Executed trades/day are lower than signals/day because risk limits, the re-entry guard and minimum sizes reject some.",
+                  "- Per-pair numbers are small samples: do not pick the best pair afterwards and call it an edge.",
                   "- A short history is a weak sample; more days make the verdict more reliable.", ""]
         path = out / f"scalping-{stamp}.md"
         path.write_text("\n".join(lines))

@@ -46,6 +46,7 @@ class ResearchConfig:
     leverage: Decimal = Decimal(1)  # margin accounts (forex); ignored for spot crypto
     holdout_from: pd.Timestamp | None = None  # count only trades decided on/after this (final confirmation)
     min_train_signals: int = 30
+    reentry: object | None = None  # a ReentryConfig: scalping re-entry rules applied in every simulated run
 
 
 @dataclass
@@ -59,6 +60,13 @@ class ResearchResult:
     dataset_hash: str
     raw_summary: dict = field(default_factory=dict)     # the strategy's own trades, NAIA filter off
     diagnostics: dict = field(default_factory=dict)     # signal counts, rejection reasons, hit rates
+
+
+def _guard(cfg):
+    if cfg.reentry is None:
+        return None
+    from nextrade_core.scalping.reentry import ReentryGuard
+    return ReentryGuard(cfg.reentry)
 
 
 def _from(fold, cfg) -> pd.Timestamp:
@@ -110,15 +118,15 @@ def evaluate_strategy(strategy: Strategy, frames: dict[str, pd.DataFrame], instr
             test_frames = {sym: f[(f.index >= fold.test_start - pd.Timedelta(days=0)) & (f.index < fold.test_end)]
                            for sym, f in frames.items()}
             bt = Backtester(test_frames, instruments, costs, risk, cfg.initial_cash, leverage=cfg.leverage,
-                            scorer=None if judged_raw else scorer, exit_policy=exit_policy)
+                            scorer=None if judged_raw else scorer, exit_policy=exit_policy, reentry=_guard(cfg))
             res = bt.run(_signals_in(signals, _from(fold, cfg), fold.test_end))
-            raw_res = Backtester(test_frames, instruments, costs, risk, cfg.initial_cash, leverage=cfg.leverage, exit_policy=exit_policy).run(
+            raw_res = Backtester(test_frames, instruments, costs, risk, cfg.initial_cash, leverage=cfg.leverage, exit_policy=exit_policy, reentry=_guard(cfg)).run(
                 _signals_in(signals, _from(fold, cfg), fold.test_end))
             if len(raw_res.trades):
                 raw_trades.append(raw_res.trades.assign(fold=fold.number))
             for k, v in res.rejections.items():
                 rejections_total[k] = rejections_total.get(k, 0) + v
-            base_bt = Backtester(test_frames, instruments, costs, risk, cfg.initial_cash, leverage=cfg.leverage, exit_policy=exit_policy)
+            base_bt = Backtester(test_frames, instruments, costs, risk, cfg.initial_cash, leverage=cfg.leverage, exit_policy=exit_policy, reentry=_guard(cfg))
             base_res = base_bt.run(_signals_in(base_signals, _from(fold, cfg), fold.test_end))
             if len(res.trades):
                 oos_trades.append(res.trades.assign(fold=fold.number))
