@@ -423,3 +423,9 @@ real Milestone 0 result.
   duplicate-signal protection; time stop without a signal object; exposure limits in NARA.
 - New: `authorise_paper_trial`, `run_paper_scalper` (supervisor), `stop_paper_scalper`, `paper_status`, `paper_safety` write guard.
 - Smoke-tested with real child processes against a local fake exchange (sandbox has no exchange access). No strategy result exists yet.
+
+## 2026-11-22 (night): high-frequency paper scalper (ADR 0015)
+- New: Bybit WebSocket adapter with send allow-list; `nextrade_core/hft` (market state, four fast strategies, paper exchange, engine);
+  `services/hft/runtime.py`; commands `run_hft_scalper`, `stop_hft_scalper`, `hft_status`, `replay_hft`.
+- Fixed during build: in-flight entries were not counted toward exposure (found by test).
+- Synthetic benchmark: ~144 trades/h reachable, net negative without an edge, 44 us/event. Negative result recorded in ADR 0015.

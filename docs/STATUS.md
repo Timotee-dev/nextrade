@@ -60,3 +60,7 @@ Harness built and tested on synthetic data. Real evidence pending: run probe_ven
 ```
 Logs: `logs\paper\recorder.log`, `trader.log`, `telegram.log`. It is an UNVALIDATED exploratory trial: the numbers are evidence, not proof.
 After a daily-loss pause the trader stays paused until you resume it (Telegram /resume or restart the launcher): deliberate.
+
+## High-frequency paper scalper (ADR 0015)
+Run: `python manage.py run_hft_scalper --check`, then `run_hft_scalper`; watch `hft_status --watch 5`; stop `stop_hft_scalper`.
+Stop the 5-minute scalper first. Unvalidated strategies; records real tape to `data/ticks/`; replay with `replay_hft`. Not evidence of profit.

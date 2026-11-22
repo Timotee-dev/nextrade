@@ -1,0 +1,56 @@
+{
+  "scalp_breakout": {
+    "strategy": "scalp_breakout",
+    "paper": true,
+    "live": false,
+    "evidence": "OPERATOR-AUTHORISED EXPLORATORY PAPER TRIAL: not a decision-gate pass; results are unvalidated; paper only, no real orders",
+    "approved_at": "2026-11-22T09:43:29+00:00",
+    "timeframe": "5m",
+    "trial": true
+  },
+  "scalp_meanrev": {
+    "strategy": "scalp_meanrev",
+    "paper": true,
+    "live": false,
+    "evidence": "OPERATOR-AUTHORISED EXPLORATORY PAPER TRIAL: not a decision-gate pass; results are unvalidated; paper only, no real orders",
+    "approved_at": "2026-11-22T09:43:29+00:00",
+    "timeframe": "5m",
+    "trial": true
+  },
+  "scalp_momentum": {
+    "strategy": "scalp_momentum",
+    "paper": true,
+    "live": false,
+    "evidence": "OPERATOR-AUTHORISED EXPLORATORY PAPER TRIAL: not a decision-gate pass; results are unvalidated; paper only, no real orders",
+    "approved_at": "2026-11-22T09:43:29+00:00",
+    "timeframe": "5m",
+    "trial": true
+  },
+  "scalp_short": {
+    "strategy": "scalp_short",
+    "paper": true,
+    "live": false,
+    "evidence": "OPERATOR-AUTHORISED EXPLORATORY PAPER TRIAL: not a decision-gate pass; results are unvalidated; paper only, no real orders",
+    "approved_at": "2026-11-22T09:43:29+00:00",
+    "timeframe": "5m",
+    "trial": true
+  },
+  "scalp_trend": {
+    "strategy": "scalp_trend",
+    "paper": true,
+    "live": false,
+    "evidence": "OPERATOR-AUTHORISED EXPLORATORY PAPER TRIAL: not a decision-gate pass; results are unvalidated; paper only, no real orders",
+    "approved_at": "2026-11-22T09:43:29+00:00",
+    "timeframe": "5m",
+    "trial": true
+  },
+  "scalp_vol": {
+    "strategy": "scalp_vol",
+    "paper": true,
+    "live": false,
+    "evidence": "OPERATOR-AUTHORISED EXPLORATORY PAPER TRIAL: not a decision-gate pass; results are unvalidated; paper only, no real orders",
+    "approved_at": "2026-11-22T09:43:29+00:00",
+    "timeframe": "15m",
+    "trial": true
+  }
+}
