@@ -45,10 +45,21 @@ def status_path(base: Path) -> Path:
 
 
 def atomic_write(path: Path, text: str) -> None:
+    """Write via a temp file and rename. On Windows the rename fails while another program (hft_status, an editor, a virus
+    scanner) has the target open, so retry briefly and then fall back to writing in place. It must never raise into the trading loop."""
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_suffix(path.suffix + ".tmp")
-    tmp.write_text(text)
-    os.replace(tmp, path)
+    try:
+        tmp.write_text(text)
+        for i in range(6):
+            try:
+                os.replace(tmp, path)
+                return
+            except PermissionError:
+                time.sleep(0.03 * (i + 1))
+        path.write_text(text)
+    except OSError as exc:
+        log.warning("could not write %s: %s", path.name, exc)
 
 
 class TickRecorder:
@@ -179,37 +190,43 @@ async def run(base: Path, symbols: list[str], rules: dict[str, InstrumentRules],
     async def timer():
         while not stop.is_set():
             await asyncio.sleep(0.25)
-            engine.on_timer(time.time())
-            if tlog.pending_alerts and notify:
-                for lvl, kind, msg in tlog.pending_alerts:
-                    notify(lvl, kind, msg)
-            tlog.pending_alerts.clear()
+            try:
+                engine.on_timer(time.time())
+                if tlog.pending_alerts and notify:
+                    for lvl, kind, msg in tlog.pending_alerts:
+                        notify(lvl, kind, msg)
+                tlog.pending_alerts.clear()
+            except Exception:                      # noqa: BLE001  one bad tick must not stop the position manager
+                log.exception("timer step failed; continuing")
 
     async def housekeeping():
         last_sum = last_snap = last_dig = time.monotonic()
         while not stop.is_set():
             await asyncio.sleep(1.0)
-            if stop_path(base).exists():
-                stop.set()
-                break
-            if max_seconds and time.monotonic() - started > max_seconds:
-                stop.set()
-                break
-            m = time.monotonic()
-            st = engine.summary(time.time())
-            st.update(feed=ws.stats, written_ticks=rec.written if rec else 0, symbols=len(symbols), ts=time.time(),
-                      cfg=cfg.__dict__)
-            atomic_write(status_path(base), json.dumps(st, default=str))
-            if telegram is not None and digest_every_s and m - last_dig >= digest_every_s:
-                last_dig = m
-                telegram.push(tg.digest_text(st, engine.open_views()))
-            if m - last_snap >= snapshot_every_s:
-                last_snap = m
-                atomic_write(sp, json.dumps(engine.snapshot()))
-            if m - last_sum >= summary_every_s:
-                last_sum = m
-                if notify:
-                    notify("info", "hft_summary", summary_text(st))
+            try:
+                if stop_path(base).exists():
+                    stop.set()
+                    break
+                if max_seconds and time.monotonic() - started > max_seconds:
+                    stop.set()
+                    break
+                m = time.monotonic()
+                st = engine.summary(time.time())
+                st.update(feed=ws.stats, written_ticks=rec.written if rec else 0, symbols=len(symbols), ts=time.time(),
+                          cfg=cfg.__dict__)
+                atomic_write(status_path(base), json.dumps(st, default=str))
+                if telegram is not None and digest_every_s and m - last_dig >= digest_every_s:
+                    last_dig = m
+                    telegram.push(tg.digest_text(st, engine.open_views()))
+                if m - last_snap >= snapshot_every_s:
+                    last_snap = m
+                    atomic_write(sp, json.dumps(engine.snapshot()))
+                if m - last_sum >= summary_every_s:
+                    last_sum = m
+                    if notify:
+                        notify("info", "hft_summary", summary_text(st))
+            except Exception:                      # noqa: BLE001  a housekeeping error must never stop the stop-file watcher
+                log.exception("housekeeping step failed; continuing")
 
     started = time.monotonic()
     tasks = [asyncio.create_task(ws.run(stop)), asyncio.create_task(timer()), asyncio.create_task(housekeeping())]
@@ -220,7 +237,10 @@ async def run(base: Path, symbols: list[str], rules: dict[str, InstrumentRules],
         for t in tasks:
             t.cancel()
         await asyncio.gather(*tasks, return_exceptions=True)
-        atomic_write(sp, json.dumps(engine.snapshot()))
+        try:
+            atomic_write(sp, json.dumps(engine.snapshot()))
+        except Exception:                          # noqa: BLE001
+            log.exception("final snapshot failed")
         if rec:
             rec.close()
     return engine

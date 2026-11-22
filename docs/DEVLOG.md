@@ -436,3 +436,7 @@ real Milestone 0 result.
 - Telegram: `services/hft/notifier.py` sends a message for every open (bought qty/price, target, stop, reason) and every close (sold price,
   reason, gross, fees, net, hold time, running totals) plus a status line every `--digest-every` seconds (default 5). Sent straight from the
   scalper in a background thread (the old outbox can lag up to 25 s).
+- Hang found (user run 1 and 2): the status file went stale and the stop file was ignored. Cause: on Windows `os.replace` raises PermissionError
+  while `hft_status` (or an editor/AV) has the status file open; the exception killed the housekeeping task, which also hosts the stop-file
+  watcher. Fixed: atomic_write retries then writes in place and never raises; the housekeeping and timer loops catch and log errors per step.
+- Alert rows are written on a worker thread (Django ORM is not allowed on the asyncio thread).

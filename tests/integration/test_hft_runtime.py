@@ -148,3 +148,45 @@ def test_runtime_telegram_gets_open_and_close_messages(tmp_path: Path, monkeypat
     n.close()
     text = "\n".join(sent)
     assert "OPENED X" in text and "CLOSED X" in text and "NET" in text
+
+
+def test_housekeeping_survives_write_failures_and_still_honours_stop_file(tmp_path: Path, monkeypatch):
+    calls = {"n": 0}
+    real = runtime.atomic_write
+
+    def flaky(path, text):
+        calls["n"] += 1
+        if calls["n"] <= 2:
+            raise PermissionError("file in use")
+        real(path, text)
+
+    monkeypatch.setattr(runtime, "atomic_write", flaky)
+
+    async def go():
+        async def later():
+            await asyncio.sleep(3.5)
+            runtime.stop_path(tmp_path).parent.mkdir(parents=True, exist_ok=True)
+            runtime.stop_path(tmp_path).write_text("stop")
+
+        class Idle:
+            stats = {}
+            def __init__(self, *a, **k): pass
+            async def run(self, stop): await stop.wait()
+        t = asyncio.create_task(later())
+        await runtime.run(tmp_path, ["X"], {}, 27.0, HftConfig(), ws_factory=lambda s, cb: Idle(), record_ticks=False, resume=False)
+        await t
+    asyncio.run(asyncio.wait_for(go(), 12))
+    assert runtime.status_path(tmp_path).exists()           # status kept updating after the failures
+
+
+def test_atomic_write_retries_when_rename_is_denied(tmp_path: Path, monkeypatch):
+    real, n = runtime.os.replace, {"n": 0}
+
+    def deny(a, b):
+        n["n"] += 1
+        if n["n"] < 3:
+            raise PermissionError("in use")
+        real(a, b)
+    monkeypatch.setattr(runtime.os, "replace", deny)
+    runtime.atomic_write(tmp_path / "s.json", "{}")
+    assert (tmp_path / "s.json").read_text() == "{}"
