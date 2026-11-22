@@ -429,3 +429,7 @@ real Milestone 0 result.
   `services/hft/runtime.py`; commands `run_hft_scalper`, `stop_hft_scalper`, `hft_status`, `replay_hft`.
 - Fixed during build: in-flight entries were not counted toward exposure (found by test).
 - Synthetic benchmark: ~144 trades/h reachable, net negative without an edge, 44 us/event. Negative result recorded in ADR 0015.
+- First real run (Bybit WS, 40 markets): 118 signals, 0 entries. Every non-duplicate signal was rejected `below_min_notional`: the sizing (8% of
+  27 USDT = 2.2 USDT) was under Bybit's minimum order. Fixed: positions are lifted to the exchange minimum (cap 25% of equity). With ~27 USDT
+  this limits concurrency to about 5 positions. The process also stopped updating its status after a few minutes; the launcher now disables
+  the Windows QuickEdit console mode (a click in the window freezes a running program).

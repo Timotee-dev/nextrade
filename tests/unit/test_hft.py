@@ -270,3 +270,20 @@ def test_scanning_covers_all_markets_and_funnel_counts_add_up():
     drive(e, "ABC", 2, lambda s, t: 100.0)
     s = e.summary()
     assert s["scans"] >= 3 and s["signals"] >= 3 and s["entries"] == 3
+
+
+def test_small_account_is_lifted_to_the_exchange_minimum_order_size():
+    ex = PaperExchange(cash=27.0, rules={s: InstrumentRules(0.0001, 0.0001, 5.0) for s in ("A", "B", "C")})
+    e = HftEngine(HftConfig(), ex, Market(["A", "B", "C"]), {"always": Always(target=500.0)})
+    drive(e, "ABC", 3, lambda s, t: 100.0)
+    assert e.stats["entries"] >= 1 and not e.rejects["below_min_notional"]
+    for p in e.positions.values():
+        assert p.entry_fill * p.entry_qty >= 5.0
+    assert len(e.positions) <= 5                                 # 27 USDT cannot hold more 5 USDT orders than this
+
+
+def test_minimum_order_larger_than_a_quarter_of_equity_is_refused():
+    ex = PaperExchange(cash=10.0, rules={"A": InstrumentRules(0.0001, 0.0001, 5.0)})
+    e = HftEngine(HftConfig(), ex, Market(["A"]), {"always": Always(target=500.0)})
+    drive(e, "A", 2, lambda s, t: 100.0)
+    assert not e.positions and e.rejects["below_min_notional"] > 0

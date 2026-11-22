@@ -65,8 +65,24 @@ class Command(BaseCommand):
         parser.add_argument("--summary-every", type=float, default=600.0)
         parser.add_argument("--new-account", action="store_true", help="ignore the saved state and start from the full capital")
 
+    @staticmethod
+    def _disable_quickedit() -> None:
+        """Windows console 'QuickEdit' freezes the program whenever the window is clicked. Turn it off for this window."""
+        if os.name != "nt":
+            return
+        try:
+            import ctypes
+            k = ctypes.windll.kernel32
+            h = k.GetStdHandle(-10)
+            mode = ctypes.c_uint32()
+            if k.GetConsoleMode(h, ctypes.byref(mode)):
+                k.SetConsoleMode(h, (mode.value & ~0x0040) | 0x0080)
+        except Exception:                         # noqa: BLE001
+            pass
+
     def handle(self, *args, **o):
         base = Path(settings.BASE_DIR)
+        self._disable_quickedit()
         logging.basicConfig(level=logging.INFO, format="%(asctime)s %(name)s %(message)s")
         logging.getLogger("httpx").setLevel(logging.WARNING)
         paper_safety.install_write_guard()

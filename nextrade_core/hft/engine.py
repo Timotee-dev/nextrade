@@ -29,6 +29,7 @@ from .strategies import HSignal, HStrategy
 class HftConfig:
     max_positions: int = 12
     pos_frac: float = 0.08            # target notional per position, fraction of equity
+    max_pos_frac: float = 0.25        # a position may be raised to the exchange minimum order size, but never above this
     risk_per_trade: float = 0.005     # max loss at the stop, fraction of equity
     max_exposure: float = 0.90        # all open notional, fraction of equity
     min_net_bps: float = 5.0          # a signal's target must plan at least this NET (after fees, spread, slippage)
@@ -241,10 +242,17 @@ class HftEngine:
         eq = self.equity()
         stop_frac = sig.stop_bps / 10_000
         notional = min(eq * self.cfg.pos_frac, eq * self.cfg.risk_per_trade / stop_frac)
+        rules = self.ex.rule(sig.symbol)
+        floor_n = rules.min_notional * 1.05
+        if notional < floor_n:                       # small account: lift to the exchange minimum if that is still prudent
+            notional = floor_n
+            if notional > eq * self.cfg.max_pos_frac or notional * stop_frac > eq * self.cfg.risk_per_trade * 1.5:
+                return self._reject("below_min_notional")
         if self.exposure() + notional > eq * self.cfg.max_exposure:
             return self._reject("exposure_limit")
-        rules = self.ex.rule(sig.symbol)
         qty = rules.floor_qty(notional / st.ask)
+        if qty * st.ask < rules.min_notional * 1.02:
+            qty = round(qty + rules.step, 12)
         if qty < rules.min_qty or qty * st.ask < rules.min_notional * 1.02:
             return self._reject("below_min_notional")
         if self.ex.cash < qty * st.ask * (1 + self.ex.taker_fee) * 1.001:
