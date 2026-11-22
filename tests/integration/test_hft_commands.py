@@ -72,3 +72,15 @@ def test_launcher_refuses_when_5m_scalper_running(monkeypatch, tmp_path, setting
     monkeypatch.setattr(run_hft_scalper, "BybitClient", Fake)
     with pytest.raises(Exception, match="Pre-flight failed"):
         call_command("run_hft_scalper", "--check", stdout=StringIO())
+
+
+@pytest.mark.django_db(transaction=True)
+def test_notify_works_from_inside_an_event_loop():
+    import asyncio
+    async def go():
+        run_hft_scalper.notify("info", "hft_test", "hello")
+        await asyncio.sleep(0)
+    asyncio.run(go())
+    run_hft_scalper._alert_pool.shutdown(wait=True)
+    run_hft_scalper._alert_pool = run_hft_scalper.ThreadPoolExecutor(max_workers=1)
+    assert Alert.objects.filter(kind="hft_test").exists()

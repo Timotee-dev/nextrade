@@ -20,6 +20,9 @@ import time
 from datetime import UTC, datetime
 from pathlib import Path
 
+from concurrent.futures import ThreadPoolExecutor
+
+from django import db
 from django.conf import settings
 from django.core.management import call_command
 from django.core.management.base import BaseCommand, CommandError
@@ -42,11 +45,21 @@ def ws_guard_check() -> tuple[str, bool, str]:
         return ("websocket allow-list blocks order operations", True, f"only {sorted(ALLOWED_OPS)} can ever be sent")
 
 
-def notify(level: str, kind: str, msg: str) -> None:
+_alert_pool = ThreadPoolExecutor(max_workers=1, thread_name_prefix="hft-alert")
+
+
+def _write_alert(level: str, kind: str, msg: str) -> None:
     try:
         Alert.objects.create(level=level, kind=kind, message=msg)
-    except Exception:                    # noqa: BLE001  a notification problem must never stop trading
-        logging.getLogger("hft").warning("could not queue alert", exc_info=True)
+    except Exception as exc:             # noqa: BLE001  a notification problem must never stop trading
+        logging.getLogger("hft").warning("could not queue alert: %s", exc)
+    finally:
+        db.connections.close_all()
+
+
+def notify(level: str, kind: str, msg: str) -> None:
+    """Queue an alert. Django's ORM may not be called from the asyncio thread, so the write runs on its own worker thread."""
+    _alert_pool.submit(_write_alert, level, kind, msg)
 
 
 class Command(BaseCommand):
