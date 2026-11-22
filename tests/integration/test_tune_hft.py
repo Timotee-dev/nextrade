@@ -46,3 +46,20 @@ def test_tune_command_reports_honestly(tmp_path, settings):
     text = out.getvalue()
     assert "settings earned a net profit on BOTH" in text and ("CANDIDATE" in text or "no edge" in text)
     assert len(grid(False)) > 50
+
+
+def test_reading_a_tape_file_that_is_still_being_written(tmp_path):
+    rec = runtime.TickRecorder(tmp_path, min_gap_s=0)
+    t = 1_700_000_000.0
+    for i in range(3000):
+        t += 0.05
+        rec.write(Quote("BTCUSDT", t, 100.0, 100.02, 5, 5))
+    rec._fh.flush()
+    f = next(tmp_path.glob("*.gz"))
+    data = f.read_bytes()
+    cut = tmp_path / "ticks-cut.jsonl.gz"
+    cut.write_bytes(data[: int(len(data) * 0.7)])          # simulate the scalper still writing: truncated mid-stream
+    got = list(runtime.read_ticks(cut))
+    assert 0 < len(got) < 3000
+    rec.close()
+    assert len(list(runtime.read_ticks(f))) == 3000

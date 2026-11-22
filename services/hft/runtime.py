@@ -13,6 +13,7 @@ import json
 import logging
 import os
 import time
+import zlib
 from collections.abc import Callable
 from datetime import UTC, datetime
 from pathlib import Path
@@ -71,6 +72,7 @@ class TickRecorder:
         self._hour = ""
         self._last: dict[str, float] = {}
         self.written = 0
+        self._flushed = 0.0
 
     def _open(self, ts: float) -> None:
         hour = datetime.fromtimestamp(ts, UTC).strftime("%Y%m%d-%H")
@@ -99,6 +101,9 @@ class TickRecorder:
         self._open(ev.ts)
         self._fh.write(json.dumps(row, separators=(",", ":")) + "\n")
         self.written += 1
+        if ev.ts - self._flushed >= 5.0:                # make the file readable by replay/tuner while it is still being written
+            self._fh.flush()
+            self._flushed = ev.ts
 
     def close(self) -> None:
         if self._fh:
@@ -107,14 +112,20 @@ class TickRecorder:
 
 
 def read_ticks(path: Path):
-    """Yield Quote/Trade events from a recorder file, for replay."""
-    with gzip.open(path, "rt", encoding="utf-8") as fh:
-        for line in fh:
-            r = json.loads(line)
-            if r[0] == "q":
-                yield Quote(r[1], r[2], r[3], r[4], r[5], r[6])
-            else:
-                yield Trade(r[1], r[2], r[3], r[4], bool(r[5]))
+    """Yield Quote/Trade events from a recorder file, for replay. Tolerates a file that is still being written (truncated end)."""
+    try:
+        with gzip.open(path, "rt", encoding="utf-8") as fh:
+            for line in fh:
+                try:
+                    r = json.loads(line)
+                except ValueError:
+                    return                              # half-written last line
+                if r[0] == "q":
+                    yield Quote(r[1], r[2], r[3], r[4], r[5], r[6])
+                else:
+                    yield Trade(r[1], r[2], r[3], r[4], bool(r[5]))
+    except (EOFError, zlib.error, OSError):
+        return                                          # unfinished gzip block: keep what was read
 
 
 class TradeLog:
