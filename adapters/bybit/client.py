@@ -32,7 +32,7 @@ VENUE = "bybit"
 MAX_PER_REQUEST = 1_000
 INTERVALS = {Timeframe.M1: "1", Timeframe.M3: "3", Timeframe.M5: "5", Timeframe.M15: "15", Timeframe.M30: "30",
              Timeframe.H1: "60", Timeframe.H4: "240", Timeframe.D1: "D"}
-STABLES = {"USDC", "FDUSD", "TUSD", "DAI", "USDE", "USDD", "USDP", "PYUSD", "EUR", "EURI", "USDT", "BUSD"}
+STABLES = {"USDY", "XAUT", "PAXG", "BBSOL", "WBTC", "STETH", "WSTETH", "CBBTC", "USDC", "FDUSD", "TUSD", "DAI", "USDE", "USDD", "USDP", "PYUSD", "EUR", "EURI", "USDT", "BUSD"}
 LEVERAGED = ("2L", "2S", "3L", "3S", "5L", "5S", "UP", "DOWN")
 
 
@@ -87,7 +87,18 @@ class BybitClient:
     def close(self) -> None:
         self._http.close()
 
-    def _get(self, path: str, params: dict | None = None) -> Any:
+    def _get(self, path: str, params: dict | None = None, retries: int = 4) -> Any:
+        """GET with retries: DNS hiccups, timeouts and 5xx are retried with backoff (1, 2, 4, 8 s)."""
+        for attempt in range(retries + 1):
+            try:
+                return self._get_once(path, params)
+            except RetryableError:
+                if attempt == retries:
+                    raise
+                self._sleep(min(8.0, 2.0 ** attempt))
+        raise AssertionError("unreachable")
+
+    def _get_once(self, path: str, params: dict | None = None) -> Any:
         wait = self._min_interval - (time.monotonic() - self._last)
         if wait > 0:
             self._sleep(wait)

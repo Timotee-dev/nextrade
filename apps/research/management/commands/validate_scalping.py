@@ -66,6 +66,8 @@ class Command(BaseCommand):
         parser.add_argument("--timeframes", default="1m,3m,5m")
         parser.add_argument("--strategies", default=",".join(SCALP_PREREGISTERED))
         parser.add_argument("--symbols", default=None, help="default: every stored symbol of the venue")
+        parser.add_argument("--exclude", default="USDYUSDT,XAUTUSDT,BBSOLUSDT,PAXGUSDT",
+                            help="pegged/derivative tokens that do not move like tradable crypto (they only add costs)")
         parser.add_argument("--days", type=float, default=None, help="use only the latest N days of stored data")
         parser.add_argument("--holdout-days", type=float, default=10)
         parser.add_argument("--train-days", type=int, default=7)
@@ -81,7 +83,8 @@ class Command(BaseCommand):
         qs = Instrument.objects.filter(venue=venue)
         if o["symbols"]:
             qs = qs.filter(symbol__in=[s.strip().upper() for s in o["symbols"].split(",")])
-        instruments = {i.symbol: i for i in qs if i.candles.exists()}
+        skip = {x.strip().upper() for x in o["exclude"].split(",") if x.strip()}
+        instruments = {i.symbol: i for i in qs if i.candles.exists() and i.symbol not in skip}
         if not instruments:
             raise CommandError(f"No stored {venue} candles. Run load_{venue}_history first.")
         store = CandleStore(instruments)

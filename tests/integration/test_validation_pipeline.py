@@ -227,3 +227,47 @@ def test_run_trader_accepts_bybit_venue_and_marks_scalp_rule_based(settings, tmp
     settings.BASE_DIR = tmp_path
     with pytest.raises(CommandError, match="No instruments"):
         call_command("run_trader", venue="bybit", strategies="scalp_trend", timeframe="5m", max_steps=1)
+
+
+def test_bybit_retries_transient_failures_then_succeeds_and_gives_up():
+    calls = {"n": 0}
+
+    def flaky(request):
+        calls["n"] += 1
+        if calls["n"] < 3:
+            raise httpx.ConnectError("getaddrinfo failed")
+        return httpx.Response(200, json={"retCode": 0, "result": {"list": []}})
+    c = BybitClient(transport=httpx.MockTransport(flaky), min_interval_s=0, sleep=lambda s: None)
+    assert c.tickers() == [] and calls["n"] == 3
+    dead = BybitClient(transport=httpx.MockTransport(lambda r: (_ for _ in ()).throw(httpx.ConnectError("x"))),
+                       min_interval_s=0, sleep=lambda s: None)
+    from adapters.base import RetryableError
+    with pytest.raises(RetryableError):
+        dead.tickers()
+
+
+def test_load_reports_failed_pairs_honestly(monkeypatch, settings, tmp_path, capsys):
+    settings.BASE_DIR = tmp_path
+
+    def handler(request):
+        if request.url.path.endswith("/market/kline") and request.url.params["symbol"] == "ETHUSDT":
+            return httpx.Response(403)
+        return kline_handler(request)
+    monkeypatch.setattr(load_bybit_history, "now_utc", lambda: datetime(2026, 3, 1, 12, 0, tzinfo=UTC))
+    monkeypatch.setattr(load_bybit_history, "make_bybit",
+                        lambda: BybitClient(transport=httpx.MockTransport(handler), min_interval_s=0, sleep=lambda s: None))
+    call_command("load_bybit_history", top=2, days=0.1)
+    out = capsys.readouterr().out
+    assert "1 of 2 pairs loaded" in out and "ETHUSDT" in out and "All 2 pairs" not in out
+
+
+def test_pegged_tokens_are_not_in_the_universe_and_validation_skips_them(monkeypatch, settings, tmp_path, capsys):
+    from adapters.bybit.client import STABLES
+    assert {"USDY", "XAUT", "BBSOL"} <= STABLES
+    settings.BASE_DIR = tmp_path
+    end = seed_bybit("AAAUSDT", 24, 3)
+    seed_bybit("USDYUSDT", 24, 4)
+    monkeypatch.setattr(validate_scalping, "now_utc", lambda: end)
+    call_command("validate_scalping", venue="bybit", timeframes="5m", strategies="scalp_momentum",
+                 holdout_days=6, train_days=5, test_days=3, min_trades=10)
+    assert "1 symbols on bybit" in capsys.readouterr().out

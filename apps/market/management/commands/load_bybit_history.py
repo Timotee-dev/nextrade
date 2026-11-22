@@ -65,6 +65,7 @@ class Command(BaseCommand):
                 path.write_text(json.dumps({"as_of": now.isoformat(), "rule": "top by 24h turnover, USDT spot, "
                                             "no stablecoins or leveraged tokens", "symbols": symbols,
                                             "turnover24h": turnover}, indent=2))
+            failed: list[str] = []
             for s in symbols:
                 first, last = store.first_open_time(s, tf), store.last_open_time(s, tf)
                 ranges = [(start, end)] if last is None else []
@@ -80,9 +81,16 @@ class Command(BaseCommand):
                             store.save_candles(bars, "rest")
                             total += len(bars)
                 except VenueError as exc:
-                    self.stdout.write(self.style.ERROR(f"  {s}: {exc}"))
+                    failed.append(s)
+                    self.stdout.write(self.style.ERROR(f"  {s}: FAILED after retries: {exc}"))
                     continue
                 self.stdout.write(f"  {s}: {total:,} new 1m bars")
         finally:
             client.close()
-        self.stdout.write(self.style.SUCCESS(f"Done: {len(symbols)} pairs. Next: validate_scalping --venue bybit"))
+        ok = len(symbols) - len(failed)
+        if failed:
+            self.stdout.write(self.style.WARNING(
+                f"{ok} of {len(symbols)} pairs loaded. FAILED: {', '.join(failed)}. Run the same command again: "
+                "it only fetches what is missing."))
+        else:
+            self.stdout.write(self.style.SUCCESS(f"All {ok} pairs loaded. Next: validate_scalping --venue bybit"))
