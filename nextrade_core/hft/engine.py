@@ -22,6 +22,8 @@ from typing import Any
 from .events import Quote, Trade
 from .exchange import DuplicateOrder, PaperExchange
 from .market import Market, SymbolState
+from dataclasses import replace
+
 from .strategies import HSignal, HStrategy
 
 
@@ -47,6 +49,12 @@ class HftConfig:
     exit_retry_s: float = 1.0
     stale_exit_s: float = 10.0
     entry_timeout_s: float = 5.0
+    # selectivity (the "fewer, better trades" levers; defaults leave behaviour unchanged)
+    target_mult: float = 1.0          # scales each signal's profit target and stop distance
+    hold_mult: float = 1.0            # scales each signal's maximum hold time
+    enabled: tuple = ()               # strategy names allowed to trade; empty = all
+    max_entries_per_day: int = 0      # 0 = no cap
+    min_vol_bps: float = 0.0          # skip markets whose 2-minute volatility is below this (quiet markets cannot pay the costs)
 
 
 @dataclass
@@ -117,6 +125,7 @@ class HftEngine:
         self.proc_ns_total = 0
         self.proc_ns_max = 0
         self.recent: list[dict] = []
+        self._day_entries: dict[int, int] = {}
         self.marks: dict[str, float] = {}      # last known bid per symbol, so holdings stay valued before the first quote after a restart
         self.prev_active_s = 0.0
         self.session_events = 0
@@ -225,10 +234,18 @@ class HftEngine:
         if why:
             return
         self.stats["scans"] += 1
+        if self.cfg.min_vol_bps and st.vol_bps(now, 120) < self.cfg.min_vol_bps:
+            self.stats["quiet_skipped"] += 1
+            return
         cost = self.cost_bps(st)
-        for strat in self.strategies.values():
+        for name, strat in self.strategies.items():
+            if self.cfg.enabled and name not in self.cfg.enabled:
+                continue
             sig = strat.evaluate(st, now, cost)
             if sig is not None:
+                if self.cfg.target_mult != 1.0 or self.cfg.hold_mult != 1.0:
+                    sig = replace(sig, target_bps=sig.target_bps * self.cfg.target_mult,
+                                  stop_bps=sig.stop_bps * self.cfg.target_mult, max_hold_s=sig.max_hold_s * self.cfg.hold_mult)
                 self._try_enter(sig, st, now)
                 return
 
@@ -241,6 +258,8 @@ class HftEngine:
         k = (sig.strategy, sig.symbol)
         if now - self._last_signal.get(k, -1e9) < self.cfg.resignal_s:
             return self._reject("duplicate_signal")
+        if self.cfg.max_entries_per_day and self._day_entries.get(utc_day(now), 0) >= self.cfg.max_entries_per_day:
+            return self._reject("daily_trade_cap")
         self._last_signal[k] = now
         if sig.symbol in self.positions:
             return self._reject("already_in_market")
@@ -285,6 +304,7 @@ class HftEngine:
             sig.mid * (1 + sig.target_bps / 10_000), sig.max_hold_s, sig.take_net_bps, bid_id, now, note=sig.note,
             pending_notional=qty * st.ask)
         self.stats["entries_sent"] += 1
+        self._day_entries[utc_day(now)] = self._day_entries.get(utc_day(now), 0) + 1
 
     # ------------------------------------------------------------------ fills
     def _on_fill(self, f, st: SymbolState, now: float) -> None:

@@ -77,6 +77,11 @@ class Command(BaseCommand):
         parser.add_argument("--max-seconds", type=float, default=0)
         parser.add_argument("--summary-every", type=float, default=600.0)
         parser.add_argument("--digest-every", type=float, default=5.0, help="seconds between Telegram status lines (0 = off)")
+        parser.add_argument("--target-mult", type=float, default=1.0, help="scale profit targets and stops (from tune_hft)")
+        parser.add_argument("--hold-mult", type=float, default=1.0)
+        parser.add_argument("--min-vol-bps", type=float, default=0.0, help="skip quiet markets")
+        parser.add_argument("--enabled", default="", help="comma list of strategies allowed to trade (default all)")
+        parser.add_argument("--max-entries-per-day", type=int, default=0, help="daily cap on new positions (0 = none)")
         parser.add_argument("--clear-halt", action="store_true", help="release a latched drawdown halt (keeps cash and history)")
         parser.add_argument("--new-account", action="store_true", help="ignore the saved state and start from the full capital")
 
@@ -130,7 +135,9 @@ class Command(BaseCommand):
         tg_ok, tg_msg = paper_runner.telegram_status()
         self.stdout.write(f"  Telegram notifications: {tg_msg}")
         cash = round(o["capital_ngn"] / o["ngn_per_usdt"], 4)
-        cfg = HftConfig(max_positions=o["max_positions"], pos_frac=o["pos_frac"], max_exposure=o["max_exposure"])
+        cfg = HftConfig(max_positions=o["max_positions"], pos_frac=o["pos_frac"], max_exposure=o["max_exposure"],
+                        target_mult=o["target_mult"], hold_mult=o["hold_mult"], min_vol_bps=o["min_vol_bps"],
+                        enabled=tuple(x for x in o["enabled"].split(",") if x), max_entries_per_day=o["max_entries_per_day"])
         self.stdout.write(f"Scanning {len(top)} markets over one WebSocket. Paper account {cash} USDT "
                           f"(₦{o['capital_ngn']:,.0f} at an ASSUMED {o['ngn_per_usdt']:.0f} ₦/USDT). Fee {o['fee']:.2%} per side.")
         self.stdout.write(self.style.WARNING("The four fast strategies are NEW and UNVALIDATED. This is an exploratory paper trial that "

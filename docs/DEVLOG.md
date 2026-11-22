@@ -443,3 +443,5 @@ real Milestone 0 result.
 - Bug (first live trades): after a restart the engine valued restored holdings at 0 until each market's first quote, saw a false 77% drawdown,
   latched the drawdown halt and flattened. Fixed: last known marks are kept in the snapshot and used as a fallback; loss limits are judged only
   once every held asset has a live quote (`priced()`). Trade rate now includes earlier sessions' active time. `--clear-halt` releases a latch.
+- Selectivity levers (`target_mult`, `hold_mult`, `enabled`, `max_entries_per_day`, `min_vol_bps`) and `tune_hft`: grid replay over recorded tape,
+  train on the first 60%, confirm on the unseen last 40%; a setting is a CANDIDATE only if net-positive on both. Verdict printed honestly.
