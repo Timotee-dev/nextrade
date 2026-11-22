@@ -287,3 +287,24 @@ def test_minimum_order_larger_than_a_quarter_of_equity_is_refused():
     e = HftEngine(HftConfig(), ex, Market(["A"]), {"always": Always(target=500.0)})
     drive(e, "A", 2, lambda s, t: 100.0)
     assert not e.positions and e.rejects["below_min_notional"] > 0
+
+
+def test_ws_rotates_to_the_next_host_after_a_failed_connection():
+    import asyncio
+    from adapters.bybit.ws import BybitWs
+    tried = []
+
+    def connect(url, **kw):
+        tried.append(url)
+        raise OSError("getaddrinfo failed")
+
+    stop = asyncio.Event()
+
+    async def fast(s):
+        if len(tried) >= 3:
+            stop.set()
+        await asyncio.sleep(0)
+
+    w = BybitWs(["X"], lambda e: None, connect=connect, sleep=fast)
+    asyncio.run(w.run(stop))
+    assert len(set(tried)) == 2 and tried[0] != tried[1] and tried[0] == tried[2]

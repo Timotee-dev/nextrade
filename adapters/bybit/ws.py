@@ -18,6 +18,7 @@ from nextrade_core.hft.events import Quote, Trade
 
 log = logging.getLogger("nextrade.ws")
 URL = "wss://stream.bybit.com/v5/public/spot"
+FALLBACK_URLS = [URL, "wss://stream.bytick.com/v5/public/spot"]     # Bybit's alternate domain, tried when the first will not resolve/connect
 ALLOWED_OPS = {"subscribe", "unsubscribe", "ping"}
 MAX_ARGS = 10                       # Bybit spot: at most 10 topics per subscribe request
 
@@ -89,12 +90,14 @@ def parse(raw: str | bytes, book: BookState, now: float | None = None) -> list[Q
 
 
 class BybitWs:
-    def __init__(self, symbols: list[str], on_event: Callable[[Quote | Trade], Any], *, url: str = URL,
+    def __init__(self, symbols: list[str], on_event: Callable[[Quote | Trade], Any], *, url: str | list[str] | None = None,
                  connect: Callable[..., Any] | None = None, silence_s: float = 15.0, ping_s: float = 20.0,
                  sleep: Callable[[float], Awaitable[None]] = asyncio.sleep) -> None:
-        self.symbols, self.on_event, self.url = symbols, on_event, url
+        self.urls = FALLBACK_URLS if url is None else ([url] if isinstance(url, str) else list(url))
+        self._ui = 0
+        self.symbols, self.on_event = symbols, on_event
         self.connect, self.silence_s, self.ping_s, self._sleep = connect, silence_s, ping_s, sleep
-        self.stats = {"connects": 0, "messages": 0, "events": 0, "reconnects": 0, "last_message": 0.0, "last_error": ""}
+        self.stats = {"connects": 0, "host": "", "messages": 0, "events": 0, "reconnects": 0, "last_message": 0.0, "last_error": ""}
 
     async def _send(self, ws, msg: dict) -> None:
         await ws.send(json.dumps(check_op(msg)))
@@ -110,7 +113,7 @@ class BybitWs:
             import websockets
             connect = websockets.connect
         book = BookState()
-        async with connect(self.url, ping_interval=None, max_size=2 ** 22) as ws:
+        async with connect(self.urls[self._ui % len(self.urls)], ping_interval=None, max_size=2 ** 22) as ws:
             self.stats["connects"] += 1
             for msg in subscribe_messages(self.symbols):
                 await self._send(ws, msg)
@@ -137,6 +140,7 @@ class BybitWs:
             except Exception as exc:                      # noqa: BLE001  any network trouble: reconnect
                 self.stats["last_error"] = f"{type(exc).__name__}: {str(exc)[:120]}"
                 self.stats["reconnects"] += 1
+                self._ui += 1                              # next attempt tries the next host
                 log.warning("feed dropped (%s); reconnecting in %.0fs", self.stats["last_error"], delay)
             if stop.is_set():
                 break
