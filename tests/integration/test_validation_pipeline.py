@@ -325,3 +325,22 @@ def test_check_data_report_counts_gaps_duplicates_invalid_and_sufficiency(monkey
     assert p["bars_by_tf"]["5m"] > 0 and p["ok_by_tf"] == {"1m": True, "3m": True, "5m": True}
     call_command("check_data", venue="bybit", min_days=40)
     assert "EXCLUDED" in capsys.readouterr().out
+
+
+def test_stablecoins_and_pegged_tokens_are_recognised():
+    from adapters.bybit.client import is_pegged
+    for base in ("USD1", "RLUSD", "USDC", "USDE", "FDUSD", "USDY", "XAUT", "BBSOL", "ETH3L", "PYUSD", "TUSD"):
+        assert is_pegged(base), base
+    for base in ("BTC", "ETH", "SOL", "SUI", "UNI", "ZRO", "PEPE", "LINK", "USDT0X"[:0] or "AAVE"):
+        assert not is_pegged(base), base
+
+
+def test_validation_skips_stablecoin_pairs_even_if_stored(monkeypatch, settings, tmp_path, capsys):
+    settings.BASE_DIR = tmp_path
+    end = seed_bybit("AAAUSDT", 24, 3)
+    seed_bybit("USD1USDT", 24, 4)
+    seed_bybit("RLUSDUSDT", 24, 5)
+    monkeypatch.setattr(validate_scalping, "now_utc", lambda: end)
+    call_command("validate_scalping", venue="bybit", timeframes="5m", strategies="scalp_momentum",
+                 holdout_days=6, train_days=5, test_days=3, min_trades=10, no_record=True)
+    assert "1 symbols on bybit" in capsys.readouterr().out

@@ -23,6 +23,7 @@ import pandas as pd
 from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
 
+from adapters.bybit.client import is_pegged
 from apps.market.coverage import check_pairs
 from apps.market.management.commands.check_data import write_report as write_quality
 from apps.market.models import Instrument
@@ -90,7 +91,7 @@ class Command(BaseCommand):
         if o["symbols"]:
             qs = qs.filter(symbol__in=[s.strip().upper() for s in o["symbols"].split(",")])
         skip = {x.strip().upper() for x in o["exclude"].split(",") if x.strip()}
-        instruments = {i.symbol: i for i in qs if i.candles.exists() and i.symbol not in skip}
+        instruments = {i.symbol: i for i in qs if i.candles.exists() and i.symbol not in skip and not is_pegged(i.base)}
         if not instruments:
             raise CommandError(f"No stored {venue} candles. Run load_{venue}_history first.")
         th = Thresholds(min_days=o["train_days"] + o["test_days"] + o["holdout_days"] + 1, max_age_hours=12)

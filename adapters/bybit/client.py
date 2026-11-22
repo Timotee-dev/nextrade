@@ -36,6 +36,12 @@ STABLES = {"USDY", "XAUT", "PAXG", "BBSOL", "WBTC", "STETH", "WSTETH", "CBBTC", 
 LEVERAGED = ("2L", "2S", "3L", "3S", "5L", "5S", "UP", "DOWN")
 
 
+def is_pegged(base: str) -> bool:
+    """Stablecoins and price-pegged or derivative tokens: they barely move, so a scalper only pays fees on them."""
+    b = base.upper()
+    return b in STABLES or b.startswith("USD") or (b.endswith("USD") and b != "USD") or b.endswith(LEVERAGED)
+
+
 def _dec(x: Any, default: str = "0") -> Decimal:
     try:
         return Decimal(str(x)) if x not in (None, "") else Decimal(default)
@@ -70,7 +76,7 @@ def pick_top_usdt(tickers: list[dict[str, Any]], n: int) -> list[dict[str, Any]]
         if not sym.endswith("USDT"):
             continue
         base = sym[:-4]
-        if base in STABLES or base.endswith(LEVERAGED) or not t.get("bid1Price") or not t.get("ask1Price"):
+        if is_pegged(base) or not t.get("bid1Price") or not t.get("ask1Price"):
             continue
         rows.append((float(_dec(t.get("turnover24h"))), t))
     rows.sort(key=lambda r: -r[0])
